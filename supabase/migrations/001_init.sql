@@ -3,10 +3,31 @@
 
 create extension if not exists "pgcrypto";
 
+-- Custom auth users and sessions
+create table if not exists public.users (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  password_hash text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users (id) on delete cascade,
+  token text not null unique,
+  user_agent text,
+  ip text,
+  expires_at timestamptz not null default now() + interval '30 days',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists sessions_token_idx on public.sessions (token);
+create index if not exists sessions_user_id_idx on public.sessions (user_id);
+
 -- Transactions table
 create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
   amount numeric(12,2) not null,
   currency text not null default 'USD',
   type text not null check (type in ('expense','income','transfer')),
@@ -27,7 +48,7 @@ create policy "Transactions: users can manage their own rows" on public.transact
 -- Budgets table
 create table if not exists public.budgets (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
   name text not null,
   amount numeric(12,2) not null,
   month date not null,
@@ -45,7 +66,7 @@ create policy "Budgets: users can manage their own rows" on public.budgets
 -- Categories table
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
   name text not null,
   color text,
   created_at timestamptz not null default now()

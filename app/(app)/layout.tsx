@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import AppShell from "@/components/layout/AppShell";
+import AppGuard from "@/components/layout/AppGuard";
 
 export default function AppRoutesLayout({ children }: { children: ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+  return <AppGuard>{children}</AppGuard>;
 }
