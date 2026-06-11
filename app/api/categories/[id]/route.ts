@@ -10,9 +10,14 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   }
 
   const payload = await request.json();
+  const updates = {
+    name: payload.name ? String(payload.name).trim() : undefined,
+    color: payload.color ? String(payload.color).trim() : undefined,
+  };
+
   const { data, error } = await supabaseServer
-    .from("budgets")
-    .update(payload)
+    .from("categories")
+    .update(updates)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()
@@ -22,7 +27,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ budget: data });
+  return NextResponse.json({ category: data });
 }
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -33,7 +38,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   }
 
   const { error } = await supabaseServer
-    .from("budgets")
+    .from("categories")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);

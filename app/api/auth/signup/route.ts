@@ -13,12 +13,13 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: existing, error: existingError } = await supabaseServer
-    .from("users")
-    .select("id")
-    .eq("email", email)
-    .single();
+  .from("users")
+  .select("id")
+  .eq("email", email)
+  .maybeSingle();
 
   if (existingError) {
+    console.log("Error checking existing user:", existingError);
     return NextResponse.json({ error: "Unable to create account." }, { status: 500 });
   }
 
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   const token = randomUUID();
   const userAgent = request.headers.get("user-agent") || null;
-  const ip = request.headers.get("x-forwarded-for") || request.ip || null;
+  const ip = request.headers.get("x-forwarded-for") || null;
 
   const { error: sessionError } = await supabaseServer.from("sessions").insert([
     {
