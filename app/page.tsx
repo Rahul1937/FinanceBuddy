@@ -1,22 +1,29 @@
 import Link from "next/link";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-16 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="w-full max-w-3xl rounded-[2rem] border border-slate-200 bg-white/90 p-10 shadow-xl shadow-slate-200/40 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-slate-950/20">
-        <h1 className="text-4xl font-semibold tracking-tight">Finance Buddy</h1>
-        <p className="mt-4 text-lg leading-8 text-slate-600 dark:text-slate-400">
-          Track expenses, set budgets, and get AI-powered spending insights across devices.
-        </p>
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <Link href="/login" className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
-            Sign in
-          </Link>
-          <Link href="/signup" className="rounded-full border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
-            Create account
-          </Link>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-6 py-16 text-slate-100">
+      <Card className="max-w-3xl bg-slate-950/95 text-slate-100 shadow-slate-950/30">
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Finance Buddy</p>
+            <h1 className="text-5xl font-semibold leading-tight">Smart personal finance tracking with AI insights.</h1>
+            <p className="max-w-2xl text-base leading-8 text-slate-400">
+              Track expenses, manage budgets, and get tailored spending guidance from a clean, modern dashboard.
+            </p>
+          </div>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Link href="/login" className="w-full">
+              <Button className="w-full">Sign in</Button>
+            </Link>
+            <Link href="/signup" className="w-full">
+              <Button className="w-full bg-slate-800 text-slate-100 hover:bg-slate-700">Create account</Button>
+            </Link>
+          </div>
         </div>
-      </div>
+      </Card>
     </main>
   );
 }
