@@ -1,79 +1,135 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
 
 type AuthUser = {
   id: string;
   email: string;
 };
 
+type AuthResponse<T> = {
+  data: T | null;
+  error: { message: string } | null;
+};
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user) {
-        setUser({ id: data.session.user.id, email: data.session.user.email ?? "" });
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/auth/session", { cache: "no-store" });
+        if (!response.ok) {
+          setUser(null);
+        } else {
+          const payload = await response.json();
+          setUser(payload.user ?? null);
+        }
+      } catch (err) {
+        console.error("Session initialization failed:", err);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initializeAuth();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email ?? "" });
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      listener?.subscription?.unsubscribe();
-    };
   }, []);
 
-  const isAuthenticated = Boolean(user);
+  const isAuthenticated = useMemo(() => Boolean(user), [user]);
 
-  const signIn = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return { error };
+  const signIn = useCallback(async (email: string, password: string) => {
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || payload.error) {
+        const message = payload.error?.message || payload.error || "Sign in failed.";
+        setError(message);
+        return { data: null, error: { message } };
+      }
+
+      setUser(payload.user);
+      return { data: payload.user, error: null };
+    } catch (err) {
+      console.error("Sign-in exception:", err);
+      const message = err instanceof Error ? err.message : "Sign-in failed.";
+      setError(message);
+      return { data: null, error: { message } };
     }
-    setUser({ id: data.user.id, email: data.user.email ?? "" });
-    return { error: null };
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signUp({ email, password });
-    if (error) {
-      return { error };
+  const signUp = useCallback(async (email: string, password: string) => {
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok || payload.error) {
+        const message = payload.error?.message || payload.error || "Sign up failed.";
+        setError(message);
+        return { data: null, error: { message } };
+      }
+
+      setUser(payload.user);
+      return { data: payload.user, error: null };
+    } catch (err) {
+      console.error("Sign-up exception:", err);
+      const message = err instanceof Error ? err.message : "Sign-up failed.";
+      setError(message);
+      return { data: null, error: { message } };
     }
-    if (data.user) {
-      setUser({ id: data.user.id, email });
+  }, []);
+
+  const signOut = useCallback(async () => {
+    setError(null);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Sign-out error:", err);
+    } finally {
+      setUser(null);
+      router.push("/login");
     }
-    return { error: null };
-  };
+  }, [router]);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push("/login");
-  };
-
-  const requireAuth = () => {
+  const requireAuth = useCallback(() => {
     if (!isAuthenticated && !loading) {
       router.replace("/login");
     }
-  };
+  }, [isAuthenticated, loading, router]);
 
   return useMemo(
-    () => ({ user, loading, isAuthenticated, signIn, signUp, signOut, requireAuth }),
-    [user, loading]
+    () => ({
+      user,
+      loading,
+      error,
+      isAuthenticated,
+      signIn,
+      signUp,
+      signOut,
+      requireAuth,
+    }),
+    [user, loading, error, isAuthenticated, signIn, signUp, signOut, requireAuth]
   );
 }
