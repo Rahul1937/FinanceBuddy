@@ -1,4 +1,6 @@
 import React from "react";
+import { getCategoryIcon } from "@/lib/utils/categories";
+import { format } from "date-fns";
 
 type Tx = {
   id: string;
@@ -7,34 +9,52 @@ type Tx = {
   amount: string | number;
   type: string;
   occurred_at: string;
-};
-
-const iconColors = {
-  expense: "rgba(244,63,94,0.12)",
-  income: "rgba(16,185,129,0.12)",
+  category_name?: string | null;
 };
 
 export default function TransactionList({ items }: { items: Tx[] }) {
   if (!items || items.length === 0) {
-    return <div className="text-sm text-[var(--text-muted)]">No recent transactions.</div>;
+    return (
+      <div className="flex h-24 items-center justify-center text-sm text-[var(--text-muted)]">
+        No transactions this month
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-3">
-      {items.map((tx) => (
-        <div key={tx.id} className="fb-tx-row">
-          <div className="fb-tx-icon" style={{ background: iconColors[tx.type] || "rgba(16,185,129,0.08)" }}>
-            {tx.merchant ? tx.merchant.charAt(0) : "–"}
+    <div className="space-y-0.5">
+      {items.map((tx) => {
+        const isIncome = tx.type === "income";
+        const name = tx.merchant || tx.notes || "Unnamed transaction";
+        const icon = tx.category_name ? getCategoryIcon(tx.category_name) : (isIncome ? "💰" : "📌");
+        const iconBg = isIncome
+          ? "var(--positive-soft)"
+          : "var(--surface-raised)";
+
+        let dateStr = "";
+        try {
+          dateStr = format(new Date(tx.occurred_at), "d MMM, h:mm a");
+        } catch {
+          dateStr = tx.occurred_at.slice(0, 10);
+        }
+
+        return (
+          <div key={tx.id} className="fb-tx-row">
+            <div className="fb-tx-icon" style={{ background: iconBg }}>
+              {icon}
+            </div>
+            <div className="fb-tx-info">
+              <div className="fb-tx-name">{name}</div>
+              <div className="fb-tx-meta">
+                {tx.category_name ?? "Uncategorized"} · {dateStr}
+              </div>
+            </div>
+            <div className={`fb-tx-amount ${isIncome ? "income" : "expense"}`}>
+              {isIncome ? "+" : "−"}₹{Number(tx.amount).toLocaleString("en-IN")}
+            </div>
           </div>
-          <div className="fb-tx-info">
-            <div className="fb-tx-name">{tx.merchant || tx.notes || "Unnamed transaction"}</div>
-            <div className="fb-tx-meta">{new Date(tx.occurred_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-          </div>
-          <div className={`fb-tx-amount ${tx.type === "income" ? "income" : "expense"}`}>
-            {tx.type === "income" ? "+" : "–"}{Number(tx.amount).toFixed(0)}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

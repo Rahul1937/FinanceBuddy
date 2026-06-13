@@ -1,0 +1,50 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1189 >>
+stream
+BT /F1 10 Tf 40 760 Td 16 TL
+(HDFC BANK - SAVINGS ACCOUNT STATEMENT) Tj
+T* (Account No: XXXXXXXX4821     Customer: R Sharma) Tj
+T* (Statement Period: 01-May-2026 to 31-May-2026) Tj
+T* () Tj
+T* (Date         Description                        Amount      Type     Balance) Tj
+T* (02-05-2026   UPI/Swiggy/Food Order              450.00      Dr       84550.00) Tj
+T* (03-05-2026   UPI/BigBasket/Groceries            1820.00     Dr       82730.00) Tj
+T* (05-05-2026   SALARY CREDIT - ACME CORP          85000.00    Cr       167730.00) Tj
+T* (07-05-2026   UPI/Uber/Trip to Airport           260.00      Dr       167470.00) Tj
+T* (10-05-2026   AMZN Amazon Shopping               2499.00     Dr       164971.00) Tj
+T* (12-05-2026   NEFT Transfer to Savings RD        10000.00    Dr       154971.00) Tj
+T* (15-05-2026   CREDIT CARD PAYMENT - ICICI CARD   18750.00    Dr       136221.00) Tj
+T* (18-05-2026   UPI/Zomato/Dinner                  640.00      Dr       135581.00) Tj
+T* (22-05-2026   UPI/BESCOM/Electricity Bill        1340.00     Dr       134241.00) Tj
+T* (27-05-2026   UPI/Netflix/Subscription           649.00      Dr       133592.00) Tj
+T* () Tj
+T* (Closing Balance: 133592.00) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001482 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1550
+%%EOF

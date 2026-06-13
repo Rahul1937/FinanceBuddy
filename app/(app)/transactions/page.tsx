@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
-import TransactionsListView from "@/components/transactions/TransactionsListView";
-import Input from "@/components/ui/Input";
+import { toast } from "sonner";
+import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { getCategoryIcon } from "@/lib/utils/categories";
+import { useRefreshListener, emitRefresh } from "@/lib/hooks/useRefreshBus";
 
 type Transaction = {
   id: string;
@@ -21,281 +22,408 @@ type Transaction = {
 type Category = {
   id: string;
   name: string;
+  color: string | null;
 };
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" });
+function formatINR(value: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function groupByDate(transactions: Transaction[]) {
+  const groups: Record<string, Transaction[]> = {};
+  for (const tx of transactions) {
+    const day = tx.occurred_at.slice(0, 10);
+    if (!groups[day]) groups[day] = [];
+    groups[day].push(tx);
+  }
+  return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
 }
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formState, setFormState] = useState({
-    amount: "",
-    type: "expense",
-    category_id: "",
-    merchant: "",
-    notes: "",
-    occurred_at: new Date().toISOString().slice(0, 10),
-    currency: "INR",
+  const [filterType, setFilterType] = useState("all");
+
+  // Edit modal state
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [editForm, setEditForm] = useState({
+    amount: "", type: "expense", category_id: "", merchant: "", notes: "", occurred_at: "",
   });
-  const [error, setError] = useState("");
+  const [editError, setEditError] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      const [txRes, categoryRes] = await Promise.all([fetch("/api/transactions"), fetch("/api/categories")]);
-      const txPayload = await txRes.json();
-      const categoryPayload = await categoryRes.json();
-      setTransactions(txPayload.transactions ?? []);
-      setCategories(categoryPayload.categories ?? []);
-      setLoading(false);
-    };
+  const categoryMap = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.id, c])),
+    [categories]
+  );
 
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (!editingId) {
-      setFormState((state) => ({ ...state, amount: "", merchant: "", notes: "", category_id: "", type: "expense" }));
-      return;
-    }
-
-    const transaction = transactions.find((item) => item.id === editingId);
-    if (transaction) {
-      setFormState({
-        amount: transaction.amount,
-        type: transaction.type,
-        category_id: transaction.category_id || "",
-        merchant: transaction.merchant || "",
-        notes: transaction.notes || "",
-        occurred_at: transaction.occurred_at.slice(0, 10),
-        currency: transaction.currency || "INR",
-      });
-    }
-  }, [editingId, transactions]);
-
-  const filteredTransactions = useMemo(() => {
-    return filterCategory === "all"
-      ? transactions
-      : transactions.filter((transaction) => transaction.category_id === filterCategory);
-  }, [filterCategory, transactions]);
-
-  const handleChange = (field: string, value: string) => {
-    setFormState((state) => ({ ...state, [field]: value }));
+  const load = async () => {
+    setLoading(true);
+    const [txRes, catRes] = await Promise.all([
+      fetch("/api/transactions"),
+      fetch("/api/categories"),
+    ]);
+    const [txPayload, catPayload] = await Promise.all([txRes.json(), catRes.json()]);
+    setTransactions(txPayload.transactions ?? []);
+    setCategories(catPayload.categories ?? []);
+    setLoading(false);
   };
 
-  const refreshTransactions = async () => {
-    const response = await fetch("/api/transactions");
-    const payload = await response.json();
-    setTransactions(payload.transactions ?? []);
+  useEffect(() => { load(); }, []);
+  useRefreshListener(load);
+
+  const filtered = useMemo(() => {
+    return transactions.filter((t) => {
+      const matchSearch =
+        !search ||
+        (t.merchant ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        (t.notes ?? "").toLowerCase().includes(search.toLowerCase());
+      const matchCat = filterCategory === "all" || t.category_id === filterCategory;
+      const matchType = filterType === "all" || t.type === filterType;
+      return matchSearch && matchCat && matchType;
+    });
+  }, [transactions, search, filterCategory, filterType]);
+
+  const grouped = useMemo(() => groupByDate(filtered), [filtered]);
+
+  const openEdit = (tx: Transaction) => {
+    setEditingTx(tx);
+    setEditError("");
+    setEditForm({
+      amount: tx.amount,
+      type: tx.type,
+      category_id: tx.category_id ?? "",
+      merchant: tx.merchant ?? "",
+      notes: tx.notes ?? "",
+      occurred_at: tx.occurred_at.slice(0, 10),
+    });
   };
 
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    const payload = {
-      amount: Number(formState.amount),
-      type: formState.type,
-      category_id: formState.category_id || null,
-      merchant: formState.merchant || null,
-      notes: formState.notes || null,
-      occurred_at: `${formState.occurred_at}T00:00:00.000Z`,
-      currency: formState.currency,
-    };
-
+    if (!editingTx) return;
+    setEditError("");
+    setEditSaving(true);
     try {
-      if (editingId) {
-        const response = await fetch(`/api/transactions/${editingId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await response.json();
-        if (!response.ok || data.error) {
-          throw new Error(data.error || "Unable to update transaction.");
-        }
-        setTransactions((current) => current.map((item) => (item.id === editingId ? data.transaction : item)));
-        setEditingId(null);
-      } else {
-        const response = await fetch("/api/transactions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await response.json();
-        if (!response.ok || data.error) {
-          throw new Error(data.error || "Unable to save transaction.");
-        }
-        setTransactions((current) => [data.transaction, ...current]);
-      }
+      const res = await fetch(`/api/transactions/${editingTx.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(editForm.amount),
+          type: editForm.type,
+          category_id: editForm.category_id || null,
+          merchant: editForm.merchant || null,
+          notes: editForm.notes || null,
+          occurred_at: `${editForm.occurred_at}T00:00:00.000Z`,
+          currency: "INR",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to update.");
+      setTransactions((prev) => prev.map((t) => (t.id === editingTx.id ? data.transaction : t)));
+      setEditingTx(null);
+      toast.success("Transaction updated");
+      emitRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save transaction.");
+      const message = err instanceof Error ? err.message : "Failed to update.";
+      setEditError(message);
+      toast.error(message);
+    } finally {
+      setEditSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this transaction?")) {
-      return;
-    }
-    const response = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
-    const data = await response.json();
-    if (!response.ok || data.error) {
-      setError(data.error || "Unable to delete transaction.");
-      return;
-    }
-    setTransactions((current) => current.filter((item) => item.id !== id));
-    if (editingId === id) {
-      setEditingId(null);
-    }
+    if (!confirm("Delete this transaction?")) return;
+    const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok || data.error) { toast.error(data.error || "Failed to delete."); return; }
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    if (editingTx?.id === id) setEditingTx(null);
+    toast.success("Transaction deleted");
+    emitRefresh();
   };
 
   return (
-    <section className="space-y-8 p-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-5 p-5 lg:p-6">
+      {/* Header */}
+      <div className="fb-page-header">
         <div>
-          <h1 className="text-3xl font-semibold">Transactions</h1>
-          <p className="mt-2 text-sm text-slate-400">View and manage your transaction history.</p>
+          <h1 className="fb-page-title">Transactions</h1>
+          <p className="fb-page-sub">{filtered.length} of {transactions.length} entries</p>
         </div>
-        <Link href="/transactions/new">
-          <Button>Add new transaction</Button>
+        <Link href="/transactions/new" className="fb-add-btn">
+          <Plus size={16} />
+          Add
         </Link>
-      </header>
+      </div>
 
-      <Card className="space-y-6 bg-slate-950 text-slate-100">
-        <div className="grid gap-4 md:grid-cols-[1fr_180px]">
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Filter by category</label>
-            <select
-              value={filterCategory}
-              onChange={(event) => setFilterCategory(event.target.value)}
-              className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none"
-            >
-              <option value="all">All categories</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-end gap-3">
-            <Button type="button" className="w-full" onClick={() => setFilterCategory("all")}>
-              Reset filter
-            </Button>
-          </div>
+      {/* Search + filters */}
+      <div className="fb-card space-y-3">
+        {/* Search bar */}
+        <div className="flex items-center gap-2.5 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-raised)] px-3 py-2.5">
+          <Search size={14} className="shrink-0 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            placeholder="Search transactions…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+              <X size={13} />
+            </button>
+          )}
         </div>
 
-        <form onSubmit={handleSave} className="grid gap-4 rounded-3xl border border-slate-800 bg-slate-900 p-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block text-sm font-medium text-slate-300">
-              Amount
-              <Input
-                value={formState.amount}
-                onChange={(event) => handleChange("amount", event.target.value)}
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                className="mt-2 bg-slate-950 text-slate-100"
-                required
-              />
-            </label>
-            <label className="block text-sm font-medium text-slate-300">
-              Date
-              <Input
-                type="date"
-                value={formState.occurred_at}
-                onChange={(event) => handleChange("occurred_at", event.target.value)}
-                className="mt-2 bg-slate-950 text-slate-100"
-                required
-              />
-            </label>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="block text-sm font-medium text-slate-300">
-              Type
-              <select
-                value={formState.type}
-                onChange={(event) => handleChange("type", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none"
-              >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-                <option value="transfer">Transfer</option>
-              </select>
-            </label>
-            <label className="block text-sm font-medium text-slate-300">
-              Category
-              <select
-                value={formState.category_id}
-                onChange={(event) => handleChange("category_id", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none"
-              >
-                <option value="">Uncategorized</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm font-medium text-slate-300">
-              Currency
-              <Input
-                value={formState.currency}
-                onChange={(event) => handleChange("currency", event.target.value)}
-                className="mt-2 bg-slate-950 text-slate-100"
-              />
-            </label>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="block text-sm font-medium text-slate-300">
-              Merchant
-              <Input
-                value={formState.merchant}
-                onChange={(event) => handleChange("merchant", event.target.value)}
-                className="mt-2 bg-slate-950 text-slate-100"
-              />
-            </label>
-            <label className="block text-sm font-medium text-slate-300">
-              Notes
-              <Input
-                value={formState.notes}
-                onChange={(event) => handleChange("notes", event.target.value)}
-                className="mt-2 bg-slate-950 text-slate-100"
-              />
-            </label>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-slate-400">{editingId ? "Edit transaction details." : "Create a new transaction."}</div>
-            <div className="flex flex-wrap gap-3">
-              {editingId && (
-                <Button type="button" className="bg-slate-700" onClick={() => setEditingId(null)}>
-                  Cancel edit
-                </Button>
-              )}
-              <Button type="submit">{editingId ? "Update transaction" : "Save transaction"}</Button>
-            </div>
-          </div>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-        </form>
-      </Card>
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Type filters */}
+          {(["all", "expense", "income"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold capitalize transition ${
+                filterType === t
+                  ? "bg-[var(--brand)] text-white"
+                  : "bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {t === "all" ? "All types" : t}
+            </button>
+          ))}
+          <span className="mx-1 border-r border-[var(--surface-border)]" />
+          {/* Category filters */}
+          <button
+            onClick={() => setFilterCategory("all")}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition ${
+              filterCategory === "all"
+                ? "bg-[var(--surface-border)] text-[var(--text-primary)]"
+                : "bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            }`}
+          >
+            All categories
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setFilterCategory(cat.id)}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                filterCategory === cat.id
+                  ? "text-white"
+                  : "bg-[var(--surface-raised)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+              style={filterCategory === cat.id ? { background: cat.color || "var(--brand)" } : {}}
+            >
+              {getCategoryIcon(cat.name)} {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <Card className="overflow-x-auto bg-slate-950 text-slate-100">
+      {/* Transaction list */}
+      <div className="fb-card">
         {loading ? (
-          <div className="p-6 text-slate-400">Loading transactions...</div>
+          <div className="flex items-center justify-center py-12">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--surface-border)] border-t-[var(--brand)]" />
+          </div>
+        ) : grouped.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-sm font-medium text-[var(--text-muted)]">No transactions found</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">Try adjusting your filters or add a new transaction.</p>
+          </div>
         ) : (
-          <TransactionsListView
-            items={filteredTransactions}
-            categoriesMap={Object.fromEntries(categories.map((c) => [c.id, c.name]))}
-            onEdit={(id) => setEditingId(id)}
-            onDelete={(id) => handleDelete(id)}
-          />
+          <div className="space-y-1">
+            {grouped.map(([day, txs]) => {
+              let dateLabel = "";
+              try {
+                const d = parseISO(day);
+                const today = new Date().toISOString().slice(0, 10);
+                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+                dateLabel = day === today ? "Today" : day === yesterday ? "Yesterday" : format(d, "d MMMM yyyy");
+              } catch {
+                dateLabel = day;
+              }
+
+              return (
+                <div key={day}>
+                  <div className="fb-tx-date-label">{dateLabel}</div>
+                  {txs.map((tx) => {
+                    const cat = tx.category_id ? categoryMap[tx.category_id] : null;
+                    const isIncome = tx.type === "income";
+                    const icon = cat ? getCategoryIcon(cat.name) : (isIncome ? "💰" : "📌");
+                    const iconBg = cat?.color
+                      ? `${cat.color}22`
+                      : isIncome ? "var(--positive-soft)" : "var(--surface-raised)";
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className="group fb-tx-row relative"
+                      >
+                        <div className="fb-tx-icon" style={{ background: iconBg }}>
+                          {icon}
+                        </div>
+                        <div className="fb-tx-info">
+                          <div className="fb-tx-name">{tx.merchant || tx.notes || "Unnamed"}</div>
+                          <div className="fb-tx-meta">
+                            {cat?.name ?? "Uncategorized"} · {tx.type}
+                          </div>
+                        </div>
+                        <div className={`fb-tx-amount ${isIncome ? "income" : "expense"}`}>
+                          {isIncome ? "+" : "−"}₹{Number(tx.amount).toLocaleString("en-IN")}
+                        </div>
+                        {/* Hover actions */}
+                        <div className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
+                          <button
+                            onClick={() => openEdit(tx)}
+                            className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[var(--surface-border)] hover:text-[var(--text-primary)]"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(tx.id)}
+                            className="rounded-lg p-1.5 text-[var(--text-muted)] transition hover:bg-[rgba(244,63,94,0.12)] hover:text-[var(--danger)]"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         )}
-      </Card>
-    </section>
+      </div>
+
+      {/* Edit modal */}
+      {editingTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditingTx(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Edit transaction</h2>
+              <button onClick={() => setEditingTx(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="space-y-4">
+              {/* Type toggle */}
+              <div className="flex rounded-xl bg-[var(--surface-raised)] p-1">
+                {(["expense", "income"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setEditForm((f) => ({ ...f, type: t }))}
+                    className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition ${
+                      editForm.type === t
+                        ? t === "expense"
+                          ? "bg-[var(--brand-soft)] text-[var(--brand)]"
+                          : "bg-[var(--positive-soft)] text-[var(--positive)]"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Amount</label>
+                  <div className="flex items-center gap-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-raised)] px-3 py-2.5">
+                    <span className="font-mono text-sm text-[var(--text-muted)]">₹</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editForm.amount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                      className="w-full bg-transparent font-mono text-sm text-[var(--text-primary)] outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={editForm.occurred_at}
+                    onChange={(e) => setEditForm((f) => ({ ...f, occurred_at: e.target.value }))}
+                    className="fb-input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Merchant / Description</label>
+                <input
+                  type="text"
+                  value={editForm.merchant}
+                  onChange={(e) => setEditForm((f) => ({ ...f, merchant: e.target.value }))}
+                  placeholder="e.g. Swiggy, Amazon…"
+                  className="fb-input"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Category</label>
+                  <select
+                    value={editForm.category_id}
+                    onChange={(e) => setEditForm((f) => ({ ...f, category_id: e.target.value }))}
+                    className="fb-select"
+                  >
+                    <option value="">Uncategorized</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Notes</label>
+                  <input
+                    type="text"
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                    className="fb-input"
+                  />
+                </div>
+              </div>
+
+              {editError && <p className="text-xs text-[var(--danger)]">{editError}</p>}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditingTx(null)}
+                  className="flex-1 rounded-xl border border-[var(--surface-border)] py-2.5 text-sm font-medium text-[var(--text-muted)] transition hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  className="flex-1 rounded-xl bg-[var(--brand)] py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--brand-dim)] disabled:opacity-60"
+                >
+                  {editSaving ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

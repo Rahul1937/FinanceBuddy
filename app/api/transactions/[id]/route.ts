@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
+import { categoryExcludesSpend } from "@/lib/server/spend";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -10,6 +11,10 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   }
 
   const payload = await request.json();
+  // Keep the exclude_from_spend flag in sync with the chosen category.
+  if ("category_id" in payload) {
+    payload.exclude_from_spend = await categoryExcludesSpend(user.id, payload.category_id || null);
+  }
   const { data, error } = await supabaseServer
     .from("transactions")
     .update(payload)

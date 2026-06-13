@@ -1,50 +1,80 @@
+"use client";
+
 import React from "react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 type Props = {
   label: string;
   value: string;
   sub?: string;
   trend?: { dir: "up" | "down"; text: string } | null;
+  arcPercent?: number; // 0-100 for the arc ring
+  arcColor?: string;
+  icon?: React.ReactNode;
+  valueColor?: string;
 };
 
-export default function SummaryCard({ label, value, sub, trend }: Props) {
+function BudgetArc({ percent, color }: { percent: number; color: string }) {
+  const r = 24;
+  const cx = 32;
+  const cy = 32;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - Math.min(percent / 100, 1));
+
   return (
-    <div className="fb-summary-card overflow-hidden">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <svg width="64" height="64" className="shrink-0">
+      <circle
+        cx={cx} cy={cy} r={r}
+        fill="none"
+        stroke="var(--surface-border)"
+        strokeWidth="5"
+      />
+      <circle
+        cx={cx} cy={cy} r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${cx} ${cy})`}
+        style={{ transition: "stroke-dashoffset 0.8s ease" }}
+      />
+    </svg>
+  );
+}
+
+export default function SummaryCard({ label, value, sub, trend, arcPercent, arcColor = "var(--brand)", icon, valueColor }: Props) {
+  return (
+    <div className="fb-summary-card">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {icon && (
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--positive-soft)]">
+              {icon}
+            </div>
+          )}
           <div className="fb-summary-card-label">{label}</div>
-          <div className="fb-summary-card-value mono">{value}</div>
-          {sub && <div className="fb-summary-card-sub">{sub}</div>}
-        </div>
-        <div className="relative h-16 w-16">
-          <svg viewBox="0 0 52 52" className="absolute inset-0 h-full w-full">
-            <circle cx="26" cy="26" r="20" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
-            <circle
-              cx="26"
-              cy="26"
-              r="20"
-              fill="none"
-              stroke="var(--brand)"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray="125.6"
-              strokeDashoffset="40"
-              transform="rotate(-90 26 26)"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-sm font-semibold text-[var(--text-primary)]">{trend ? (trend.dir === "up" ? "+" : "–") : ""}</span>
+          <div
+            className="fb-summary-card-value mono"
+            style={valueColor ? { color: valueColor } : undefined}
+          >
+            {value}
           </div>
+          {sub && <div className="fb-summary-card-sub">{sub}</div>}
+          {trend && (
+            <div className={`fb-summary-card-trend ${trend.dir === "up" ? "up" : "down"}`}>
+              {trend.dir === "up"
+                ? <TrendingUp size={11} />
+                : <TrendingDown size={11} />}
+              <span>{trend.text}</span>
+            </div>
+          )}
         </div>
+        {arcPercent !== undefined && (
+          <BudgetArc percent={arcPercent} color={arcColor} />
+        )}
       </div>
-      {trend && (
-        <div className={`fb-summary-card-trend ${trend.dir === "up" ? "up" : "down"}`}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="inline-block">
-            <path d={trend.dir === "up" ? "M5 15l7-8 7 8" : "M19 9l-7 8-7-8"} strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span className="ml-1 text-xs">{trend.text}</span>
-        </div>
-      )}
     </div>
   );
 }

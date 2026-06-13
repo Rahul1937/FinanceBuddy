@@ -10,27 +10,33 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          base: "#0A0F1E",
-          card: "#111827",
-          raised: "#1A2235",
-          border: "#1F2D40",
+          base: "#FAF6F0",
+          card: "#FFFFFF",
+          raised: "#F4EDE3",
+          border: "#EAE0D2",
         },
         brand: {
-          DEFAULT: "#10B981",
-          dim: "#059669",
-          glow: "#6EE7B7",
+          DEFAULT: "#E5533D",
+          dim: "#C8472F",
+          soft: "#FCE9E4",
+          glow: "#FFD9D0",
         },
-        danger: "#F43F5E",
-        warning: "#F59E0B",
+        positive: {
+          DEFAULT: "#0E9888",
+          soft: "#DBF1ED",
+        },
+        negative: "#E5533D",
+        danger: "#DC2626",
+        warning: "#D97706",
       },
       fontFamily: {
-        display: ["var(--font-display)", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
         body: ["var(--font-body)", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
       boxShadow: {
-        card: "0 24px 60px -32px rgba(0,0,0,0.65)",
-        glow: "0 0 40px rgba(16,185,129,0.16)",
+        card: "0 1px 2px rgba(28,26,23,0.04), 0 8px 24px -12px rgba(28,26,23,0.12)",
+        glow: "0 6px 16px -8px rgba(229,83,61,0.55)",
       },
       borderRadius: {
         "4xl": "2rem",

@@ -1,29 +1,67 @@
 import Link from "next/link";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-6 py-16 text-slate-100">
-      <Card className="max-w-3xl bg-slate-950/95 text-slate-100 shadow-slate-950/30">
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Finance Buddy</p>
-            <h1 className="text-5xl font-semibold leading-tight">Smart personal finance tracking with AI insights.</h1>
-            <p className="max-w-2xl text-base leading-8 text-slate-400">
-              Track expenses, manage budgets, and get tailored spending guidance from a clean, modern dashboard.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Link href="/login" className="w-full">
-              <Button className="w-full">Sign in</Button>
-            </Link>
-            <Link href="/signup" className="w-full">
-              <Button className="w-full bg-slate-800 text-slate-100 hover:bg-slate-700">Create account</Button>
-            </Link>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--surface-base)] px-6 py-16">
+      {/* Subtle background glow */}
+      <div
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 20%, rgba(229,83,61,0.10), transparent 60%)",
+        }}
+      />
+
+      <div className="w-full max-w-lg text-center">
+        {/* Logo */}
+        <div className="mb-6 flex justify-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--brand-soft)] ring-1 ring-[var(--brand)]/20">
+            <span className="font-display text-3xl font-bold text-[var(--brand)]">₹</span>
           </div>
         </div>
-      </Card>
+
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--text-muted)]">
+          Finance Buddy
+        </p>
+        <h1 className="font-display text-4xl font-bold leading-tight text-[var(--text-primary)]">
+          Smart finance tracking<br />with AI insights
+        </h1>
+        <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-[var(--text-muted)]">
+          Track expenses, set budgets, and get personalised spending guidance — all from a clean, modern dashboard.
+        </p>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link
+            href="/signup"
+            className="rounded-xl bg-[var(--brand)] px-8 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-dim)]"
+          >
+            Get started free
+          </Link>
+          <Link
+            href="/login"
+            className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] px-8 py-3 text-sm font-semibold text-[var(--text-secondary)] transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Feature list */}
+        <div className="mt-12 grid grid-cols-3 gap-4">
+          {[
+            { icon: "📊", label: "Budget tracking" },
+            { icon: "🤖", label: "AI insights" },
+            { icon: "🔒", label: "Secure & private" },
+          ].map((f) => (
+            <div
+              key={f.label}
+              className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-4"
+            >
+              <div className="mb-1.5 text-2xl">{f.icon}</div>
+              <p className="text-xs font-medium text-[var(--text-muted)]">{f.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </main>
   );
 }
