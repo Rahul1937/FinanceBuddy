@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Card from "@/components/ui/Card";
-import Button from "@/components/ui/Button";
+import { format } from "date-fns";
+import SummaryCard from "@/components/dashboard/SummaryCard";
+import DonutChart from "@/components/dashboard/DonutChart";
+import TransactionList from "@/components/dashboard/TransactionList";
 
 type Transaction = {
   id: string;
@@ -45,6 +47,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthLabel = format(new Date(), "MMMM yyyy");
 
   useEffect(() => {
     const loadData = async () => {
@@ -96,6 +99,11 @@ export default function DashboardPage() {
     [budgets, currentMonth]
   );
 
+  const totalBudget = useMemo(
+    () => currentBudgets.reduce((sum, budget) => sum + Number(budget.amount || 0), 0),
+    [currentBudgets]
+  );
+
   const budgetSpendMap = useMemo(() => {
     return monthlyTransactions.reduce<Record<string, number>>((totals, transaction) => {
       if (transaction.type !== "expense" || !transaction.category_id) {
@@ -106,111 +114,72 @@ export default function DashboardPage() {
     }, {});
   }, [monthlyTransactions]);
 
+  const chartData = useMemo(
+    () => categories.map((category) => ({
+      id: category.id,
+      label: category.name,
+      value: Math.round(budgetSpendMap[category.id] || 0),
+      color: category.color || "#38bdf8",
+    })),
+    [categories, budgetSpendMap]
+  );
+
   return (
     <section className="space-y-8 p-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="fb-page-header">
         <div>
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <p className="mt-2 text-sm text-slate-400">Overview of your spending, budgets, and recent activity.</p>
+          <h1 className="fb-page-title">Dashboard</h1>
+          <p className="fb-page-sub">{currentMonthLabel} · Overview of your spending, budgets, and recent activity.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/transactions/new">
-            <Button>Add transaction</Button>
+          <Link href="/transactions/new" className="fb-add-btn">
+            + Add expense
           </Link>
-          <Link href="/budgets">
-            <Button className="bg-slate-800">Manage budgets</Button>
+          <Link href="/budgets" className="fb-add-btn">
+            Manage budgets
           </Link>
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="space-y-3 bg-slate-950 text-slate-100">
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-500">This month</p>
-          <p className="text-3xl font-semibold">{formatCurrency(totalSpent)}</p>
-          <p className="text-sm text-slate-400">Total expenses in {currentMonth}</p>
-        </Card>
-        <Card className="space-y-3 bg-slate-950 text-slate-100">
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Income</p>
-          <p className="text-3xl font-semibold">{formatCurrency(totalIncome)}</p>
-          <p className="text-sm text-slate-400">Total income in {currentMonth}</p>
-        </Card>
-        <Card className="space-y-3 bg-slate-950 text-slate-100">
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Budgets</p>
-          <p className="text-3xl font-semibold">{currentBudgets.length}</p>
-          <p className="text-sm text-slate-400">Budgets defined for this month</p>
-        </Card>
+      <div className="fb-summary-grid">
+        <SummaryCard
+          label="Total spent"
+          value={formatCurrency(totalSpent)}
+          sub={`of ₹${totalBudget.toLocaleString()} budget`}
+          trend={{ dir: "up", text: "+8% vs May" }}
+        />
+        <SummaryCard
+          label="Income"
+          value={formatCurrency(totalIncome)}
+          sub={`Total income in ${format(new Date(currentMonth + "-01"), "MMMM")}`}
+          trend={{ dir: "down", text: "same as last month" }}
+        />
+        <SummaryCard
+          label="Budget health"
+          value={`${totalBudget ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0}%`}
+          sub={`${currentBudgets.length} budgets`}
+        />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Card className="bg-slate-950 text-slate-100">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Budget progress</h2>
-              <p className="mt-1 text-sm text-slate-400">Track spending against each category target.</p>
-            </div>
-          </div>
-          {loading ? (
-            <p className="text-sm text-slate-400">Loading budgets...</p>
-          ) : currentBudgets.length === 0 ? (
-            <p className="text-sm text-slate-400">No budgets defined yet. Add a budget to see progress.</p>
-          ) : (
-            <div className="space-y-4">
-              {currentBudgets.map((budget) => {
-                const spent = budget.category_id ? budgetSpendMap[budget.category_id] || 0 : 0;
-                const amount = Number(budget.amount || 0);
-                const progress = amount > 0 ? Math.min((spent / amount) * 100, 100) : 0;
-                const category = categories.find((item) => item.id === budget.category_id);
-                return (
-                  <div key={budget.id} className="space-y-2 rounded-3xl bg-slate-900 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-semibold text-slate-100">{budget.name || category?.name || "General"}</p>
-                        <p className="text-sm text-slate-400">{category?.name || "Uncategorized"}</p>
-                      </div>
-                      <p className="text-sm text-slate-300">{formatCurrency(spent)} / {formatCurrency(amount)}</p>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-sky-500"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+      <div className="fb-mid-row">
+        <div className="fb-card">
+          <div className="fb-card-title">Spending by category <span className="fb-card-badge">{currentMonthLabel}</span></div>
+          <DonutChart slices={chartData} />
+        </div>
 
-        <Card className="bg-slate-950 text-slate-100">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold">Recent transactions</h2>
-            <p className="mt-1 text-sm text-slate-400">Latest activity from your account.</p>
-          </div>
-          {loading ? (
-            <p className="text-sm text-slate-400">Loading transactions...</p>
-          ) : monthlyTransactions.length === 0 ? (
-            <p className="text-sm text-slate-400">No transactions recorded for this month yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {monthlyTransactions.slice(0, 5).map((transaction) => {
-                const category = categories.find((item) => item.id === transaction.category_id);
-                return (
-                  <div key={transaction.id} className="rounded-3xl border border-slate-800 bg-slate-900 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-semibold text-slate-100">{transaction.merchant || transaction.notes || "Unnamed transaction"}</p>
-                        <p className="text-sm text-slate-400">{category?.name || "Uncategorized"}</p>
-                      </div>
-                      <p className="text-sm text-slate-100">{formatCurrency(Number(transaction.amount || 0))}</p>
-                    </div>
-                    <p className="mt-2 text-sm text-slate-400">{new Date(transaction.occurred_at).toLocaleDateString()}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Card>
+        <div className="fb-card">
+          <div className="fb-card-title">Recent transactions <span className="fb-card-badge">{monthlyTransactions.length} this month</span></div>
+          <TransactionList
+            items={monthlyTransactions.slice(0, 6).map((t) => ({
+              id: t.id,
+              merchant: t.merchant,
+              notes: t.notes,
+              amount: t.amount,
+              type: t.type,
+              occurred_at: t.occurred_at,
+            }))}
+          />
+        </div>
       </div>
     </section>
   );

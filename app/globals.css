@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #030712;
-    --foreground: #f8fafc;
-  }
+  --surface-base: #0A0F1E;
+  --surface-card: #111827;
+  --surface-raised: #1A2235;
+  --surface-border: #1F2D40;
+  --brand: #10B981;
+  --brand-dim: #059669;
+  --brand-glow: #6EE7B7;
+  --danger: #F43F5E;
+  --warning: #F59E0B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CBD5E1;
+  --text-muted: #64748B;
 }
 
 html {
@@ -25,14 +25,301 @@ html {
 
 body {
   min-height: 100%;
-  background: radial-gradient(circle at top, rgba(148, 163, 184, 0.08), transparent 28%),
-    linear-gradient(180deg, #020617 0%, #030712 100%);
-  color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  background: radial-gradient(circle at top, rgba(16,185,129,0.1), transparent 18%),
+    linear-gradient(180deg, #090f1d 0%, #0a0f1e 100%);
+  color: var(--text-secondary);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(16,185,129,0.22);
+  color: #fff;
+}
+
+.fb-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.fb-page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.fb-page-sub {
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.fb-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 1.25rem;
+  padding: 0.95rem 1.3rem;
+  font-weight: 700;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.fb-add-btn:hover {
+  background: var(--brand-dim);
+  transform: translateY(-1px);
+}
+
+.fb-summary-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fb-summary-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  box-shadow: 0 28px 60px -42px rgba(0, 0, 0, 0.85);
+}
+
+.fb-summary-card-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fb-summary-card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 0.35rem;
+}
+
+.fb-summary-card-sub {
+  margin-top: 0.55rem;
+  color: #a1a8b3;
+  font-size: 0.95rem;
+}
+
+.fb-summary-card-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.fb-summary-card-trend.up {
+  color: var(--brand);
+}
+
+.fb-summary-card-trend.down {
+  color: #94a3b8;
+}
+
+.fb-card {
+  background: var(--surface-card);
+  padding: 1.25rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--surface-border);
+}
+
+.fb-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.fb-card-badge {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.fb-donut-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fb-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.fb-legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fb-legend-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fb-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+}
+
+.fb-legend-name {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.fb-legend-val {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.fb-tx-row,
+.fb-tx-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border-radius: 1.25rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.fb-tx-row:hover,
+.fb-tx-item:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fb-tx-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.fb-tx-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fb-tx-name {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.fb-tx-meta {
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.fb-tx-amount {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.fb-tx-amount.income {
+  color: var(--brand);
+}
+
+.fb-tx-amount.expense {
+  color: var(--text-primary);
+}
+
+.mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
+}
+
+@media (max-width: 1024px) {
+  .fb-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fb-mid-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes fb-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.06);
+    opacity: 0.5;
+  }
+}
+
+.fb-pulse-ring {
+  display: inline-block;
+  border-radius: 9999px;
+  padding: 0.55rem;
+  animation: fb-pulse 2.5s ease-in-out infinite;
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.08);
+}
+
+.fb-btn {
+  background: var(--surface-raised);
+  color: #fff;
+  padding: 0.85rem 1.25rem;
+  border-radius: 1.25rem;
+  font-weight: 700;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.fb-btn:hover {
+  background: var(--brand);
+}
+
+.fb-btn:disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.fb-input {
+  background: var(--surface-raised);
+  color: #e6eef3;
+  border-radius: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--surface-border);
+}
+
+.fb-card {
+  background: var(--surface-card);
+  border-radius: 1.5rem;
+  border: 1px solid var(--surface-border);
+  padding: 1.25rem;
 }

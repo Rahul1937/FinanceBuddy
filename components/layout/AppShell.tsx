@@ -4,11 +4,11 @@ import TopBar from "@/components/layout/TopBar";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[var(--surface-base)] text-[var(--text-primary)]">
       <TopBar />
-      <div className="grid min-h-[calc(100vh-4rem)] grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[280px_1fr] lg:px-8">
+      <div className="grid min-h-[calc(100vh-88px)] gap-6 px-4 py-4 lg:grid-cols-[280px_1fr] lg:px-8 lg:py-6">
         <Sidebar />
-        <main className="rounded-[2rem] border border-slate-800 bg-slate-900/90 p-6 shadow-[0_25px_50px_-25px_rgba(15,23,42,0.8)]">
+        <main className="rounded-[2rem] border border-[var(--surface-border)] bg-[var(--surface-card)] p-6 shadow-card">
           {children}
         </main>
       </div>

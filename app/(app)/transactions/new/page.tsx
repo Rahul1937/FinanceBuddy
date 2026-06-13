@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -25,6 +25,8 @@ export default function NewTransactionPage() {
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const amountRef = useRef<HTMLInputElement | null>(null);
+  const dateRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -40,7 +42,19 @@ export default function NewTransactionPage() {
     event.preventDefault();
     setError("");
     setSubmitting(true);
-
+    // basic client-side validation
+    if (!formState.amount || Number(formState.amount) <= 0) {
+      setError("Amount must be greater than zero.");
+      amountRef.current?.focus();
+      setSubmitting(false);
+      return;
+    }
+    if (!formState.occurred_at) {
+      setError("Please select a valid date.");
+      dateRef.current?.focus();
+      setSubmitting(false);
+      return;
+    }
     try {
       const response = await fetch("/api/transactions", {
         method: "POST",
@@ -61,6 +75,7 @@ export default function NewTransactionPage() {
         throw new Error(data.error || "Unable to save transaction.");
       }
 
+      // navigate back to list after save
       router.push("/transactions");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save transaction.");
@@ -82,6 +97,7 @@ export default function NewTransactionPage() {
             <label className="block text-sm font-medium text-slate-300">
               Amount
               <Input
+                ref={amountRef}
                 type="number"
                 step="0.01"
                 placeholder="0.00"
@@ -95,6 +111,7 @@ export default function NewTransactionPage() {
               Date
               <Input
                 type="date"
+                ref={dateRef}
                 value={formState.occurred_at}
                 onChange={(event) => setFormState((prev) => ({ ...prev, occurred_at: event.target.value }))}
                 className="mt-2 bg-slate-900 text-slate-100"
@@ -162,7 +179,9 @@ export default function NewTransactionPage() {
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-slate-400">Add transaction details and save to your account.</div>
-            <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Save transaction"}</Button>
+            <Button type="submit" disabled={submitting || !formState.amount || Number(formState.amount) <= 0}>
+              {submitting ? "Saving..." : "Save transaction"}
+            </Button>
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
         </form>

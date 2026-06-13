@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import BudgetCard from "@/components/budgets/BudgetCard";
 
 type Budget = {
   id: string;
@@ -259,32 +260,18 @@ export default function BudgetsPage() {
             {filteredBudgets.map((budget) => {
               const spent = budget.category_id ? spendingForCategory[budget.category_id] || 0 : 0;
               const amount = Number(budget.amount || 0);
-              const progress = amount > 0 ? Math.min((spent / amount) * 100, 100) : 0;
               const category = categories.find((cat) => cat.id === budget.category_id);
               return (
-                <div key={budget.id} className="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-lg font-semibold text-slate-100">{budget.name || category?.name || "General"}</p>
-                      <p className="text-sm text-slate-400">{category?.name || "Uncategorized"}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-slate-100">{formatCurrency(spent)} / {formatCurrency(amount)}</p>
-                      <p className="text-sm text-slate-400">{progress.toFixed(0)}% used</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Button type="button" className="bg-slate-700" onClick={() => setSelectedBudgetId(budget.id)}>
-                      Edit
-                    </Button>
-                    <Button type="button" className="bg-rose-600" onClick={() => handleDelete(budget.id)}>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
+                <BudgetCard
+                  key={budget.id}
+                  id={budget.id}
+                  name={budget.name || category?.name || "General"}
+                  category={category?.name || "Uncategorized"}
+                  amount={amount}
+                  spent={spent}
+                  onEdit={(id) => setSelectedBudgetId(id)}
+                  onDelete={(id) => handleDelete(id)}
+                />
               );
             })}
           </div>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import TransactionsListView from "@/components/transactions/TransactionsListView";
 import Input from "@/components/ui/Input";
 
 type Transaction = {
@@ -284,54 +285,16 @@ export default function TransactionsPage() {
       </Card>
 
       <Card className="overflow-x-auto bg-slate-950 text-slate-100">
-        <table className="min-w-full divide-y divide-slate-800 text-left text-sm">
-          <thead className="border-b border-slate-800">
-            <tr>
-              <th className="px-4 py-3 text-slate-400">Date</th>
-              <th className="px-4 py-3 text-slate-400">Merchant</th>
-              <th className="px-4 py-3 text-slate-400">Category</th>
-              <th className="px-4 py-3 text-slate-400">Amount</th>
-              <th className="px-4 py-3 text-slate-400">Type</th>
-              <th className="px-4 py-3 text-slate-400">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-slate-400">
-                  Loading transactions...
-                </td>
-              </tr>
-            ) : filteredTransactions.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-slate-400">
-                  No transactions found.
-                </td>
-              </tr>
-            ) : (
-              filteredTransactions.map((transaction) => {
-                const category = categories.find((item) => item.id === transaction.category_id);
-                return (
-                  <tr key={transaction.id} className="border-b border-slate-800 last:border-none">
-                    <td className="px-4 py-4">{formatDate(transaction.occurred_at)}</td>
-                    <td className="px-4 py-4">{transaction.merchant || "—"}</td>
-                    <td className="px-4 py-4">{category?.name || "Uncategorized"}</td>
-                    <td className="px-4 py-4">{Number(transaction.amount).toFixed(2)}</td>
-                    <td className="px-4 py-4">{transaction.type}</td>
-                    <td className="px-4 py-4 flex flex-wrap gap-2">
-                      <Button type="button" className="bg-slate-700" onClick={() => setEditingId(transaction.id)}>
-                        Edit
-                      </Button>
-                      <Button type="button" className="bg-rose-600" onClick={() => handleDelete(transaction.id)}>
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+        {loading ? (
+          <div className="p-6 text-slate-400">Loading transactions...</div>
+        ) : (
+          <TransactionsListView
+            items={filteredTransactions}
+            categoriesMap={Object.fromEntries(categories.map((c) => [c.id, c.name]))}
+            onEdit={(id) => setEditingId(id)}
+            onDelete={(id) => handleDelete(id)}
+          />
+        )}
       </Card>
     </section>
   );
