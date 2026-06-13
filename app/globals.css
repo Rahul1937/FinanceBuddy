@@ -1,38 +1,515 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* ── Warm Sand surfaces ─────────────────────────────── */
+  --surface-base: #FAF6F0;   /* warm cream page background */
+  --surface-card: #FFFFFF;   /* cards, sidebar, modals */
+  --surface-raised: #F4EDE3;  /* inner panels, hover, inputs */
+  --surface-border: #EAE0D2;  /* dividers, card borders */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #030712;
-    --foreground: #f8fafc;
-  }
+  /* ── Accent (coral = CTA / active) ──────────────────── */
+  --brand: #E5533D;
+  --brand-dim: #C8472F;
+  --brand-soft: #FCE9E4;
+  --brand-glow: #FFD9D0;
+
+  /* ── Money semantics ────────────────────────────────── */
+  --positive: #0E9888;       /* income, on-budget, savings (teal) */
+  --positive-soft: #DBF1ED;
+  --negative: #E5533D;       /* expense emphasis, over-budget */
+  --warning: #D97706;        /* approaching limit */
+  --danger: #DC2626;         /* destructive / hard over-budget */
+
+  /* ── Text ───────────────────────────────────────────── */
+  --text-primary: #1C1A17;
+  --text-secondary: #5E574D;
+  --text-muted: #9A9082;
+
+  /* ── Elevation ──────────────────────────────────────── */
+  --shadow-card: 0 1px 2px rgba(28, 26, 23, 0.04), 0 8px 24px -12px rgba(28, 26, 23, 0.12);
 }
 
 html {
-  min-height: 100%;
+  height: 100%;
 }
 
 body {
   min-height: 100%;
-  background: radial-gradient(circle at top, rgba(148, 163, 184, 0.08), transparent 28%),
-    linear-gradient(180deg, #020617 0%, #030712 100%);
-  color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  background: var(--surface-base);
+  color: var(--text-secondary);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--text-primary);
+}
+
+::selection {
+  background: rgba(229, 83, 61, 0.20);
+  color: var(--text-primary);
+}
+
+/* ── Page layout ─────────────────────────────────────── */
+
+.fb-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.fb-page-title {
+  font-size: 1.55rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.fb-page-sub {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+
+.fb-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 6px 16px -8px rgba(229, 83, 61, 0.55);
+}
+
+.fb-add-btn:hover {
+  background: var(--brand-dim);
+  transform: translateY(-1px);
+}
+
+.fb-btn {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  padding: 0.65rem 1.1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+  border: 1px solid var(--surface-border);
+}
+
+.fb-btn:hover {
+  background: var(--surface-border);
+}
+
+.fb-btn:disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ── Grid layouts ────────────────────────────────────── */
+
+.fb-summary-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fb-mid-row {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ── Cards ───────────────────────────────────────────── */
+
+.fb-summary-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.fb-summary-card-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.fb-summary-card-value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 0.5rem;
+  font-family: var(--font-mono), monospace;
+}
+
+.fb-summary-card-sub {
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.fb-summary-card-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+}
+
+.fb-summary-card-trend.up {
+  background: rgba(229, 83, 61, 0.10);
+  color: var(--negative);
+}
+
+.fb-summary-card-trend.down {
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+
+.fb-card {
+  background: var(--surface-card);
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-card);
+}
+
+.fb-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.fb-card-badge {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* ── Donut / Legend ──────────────────────────────────── */
+
+.fb-donut-row {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fb-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.fb-legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.fb-legend-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.fb-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.fb-legend-name {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.fb-legend-val {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+}
+
+/* ── Transactions ────────────────────────────────────── */
+
+.fb-tx-row,
+.fb-tx-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.85rem;
+  transition: background 0.12s ease;
+  cursor: pointer;
+}
+
+.fb-tx-row:hover,
+.fb-tx-item:hover {
+  background: var(--surface-raised);
+}
+
+.fb-tx-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.fb-tx-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fb-tx-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fb-tx-meta {
+  margin-top: 0.1rem;
+  color: var(--text-muted);
+  font-size: 0.775rem;
+}
+
+.fb-tx-amount {
+  font-weight: 600;
+  white-space: nowrap;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.875rem;
+}
+
+.fb-tx-amount.income {
+  color: var(--positive);
+}
+
+.fb-tx-amount.expense {
+  color: var(--text-primary);
+}
+
+.fb-tx-date-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 0.75rem 0.25rem;
+  font-weight: 600;
+}
+
+/* ── Inputs ──────────────────────────────────────────── */
+
+.fb-input {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--surface-border);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fb-input::placeholder {
+  color: var(--text-muted);
+}
+
+.fb-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.fb-select {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--surface-border);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.fb-select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+/* ── Utilities ───────────────────────────────────────── */
+
+.mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace;
+}
+
+/* ── Animations ──────────────────────────────────────── */
+
+@keyframes fb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%       { transform: scale(1.06); opacity: 0.5; }
+}
+
+.fb-pulse-ring {
+  display: inline-block;
+  border-radius: 9999px;
+  padding: 0.55rem;
+  animation: fb-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.22s ease-out;
+}
+
+/* ── Scrollbar ───────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .fb-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fb-mid-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .fb-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Budget progress ─────────────────────────────────── */
+
+.fb-progress-bg {
+  height: 5px;
+  background: var(--surface-border);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.fb-progress-fill {
+  height: 5px;
+  border-radius: 9999px;
+  transition: width 0.6s ease;
+}
+
+/* ── No scrollbar utility ────────────────────────────── */
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Focus visibility (keyboard) ─────────────────────── */
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* ── Safe-area padding (notched phones) ──────────────── */
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Skeleton shimmer ────────────────────────────────── */
+
+@keyframes fb-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.fb-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-raised) 25%,
+    var(--surface-border) 37%,
+    var(--surface-raised) 63%
+  );
+  background-size: 200% 100%;
+  animation: fb-shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.85rem;
 }

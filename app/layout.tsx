@@ -1,20 +1,27 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const displayFont = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const bodyFont = Inter({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+const monoFont = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
   title: "Finance Buddy",
-  description: "Personal finance tracker with AI-powered insights, voice input, and multi-device sync.",
+  description: "Personal finance tracker with AI-powered insights, voice input, and secure server-side auth.",
 };
 
 export default function RootLayout({
@@ -25,9 +32,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <body className="min-h-full bg-[var(--surface-base)] text-[var(--text-primary)]">
         {children}
       </body>
     </html>

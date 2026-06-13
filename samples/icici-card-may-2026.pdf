@@ -1,0 +1,49 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 992 >>
+stream
+BT /F1 10 Tf 40 760 Td 16 TL
+(ICICI BANK CREDIT CARD STATEMENT) Tj
+T* (Card No: XXXX XXXX XXXX 7702     Name: R SHARMA) Tj
+T* (Statement Date: 15-May-2026     Payment Due Date: 02-Jun-2026) Tj
+T* (Total Amount Due: 18750.00      Minimum Due: 950.00) Tj
+T* () Tj
+T* (Date         Transaction Details                Amount      Type) Tj
+T* (01-05-2026   Amazon.in Online Purchase          1299.00     Dr) Tj
+T* (03-05-2026   Flipkart Internet Purchase         2150.00     Dr) Tj
+T* (05-05-2026   Myntra Fashion                     3499.00     Dr) Tj
+T* (08-05-2026   Big Bazaar Retail                  1850.00     Dr) Tj
+T* (10-05-2026   Indian Oil Petrol Pump             2000.00     Dr) Tj
+T* (12-05-2026   Apollo Pharmacy                    1200.00     Dr) Tj
+T* (13-05-2026   Croma Electronics                  6752.00     Dr) Tj
+T* (22-05-2026   Reliance Digital Store             4500.00     Dr) Tj
+T* () Tj
+T* (Note: the 22-May purchase belongs to the next \(open\) billing cycle.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000001284 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1352
+%%EOF

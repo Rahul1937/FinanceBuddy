@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
+import { categoryExcludesSpend } from "@/lib/server/spend";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
@@ -28,15 +29,17 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = await request.json();
+  const categoryId = payload.category_id || null;
   const transaction = {
     user_id: user.id,
     amount: payload.amount,
-    currency: payload.currency || "USD",
+    currency: payload.currency || "INR",
     type: payload.type,
-    category_id: payload.category_id || null,
+    category_id: categoryId,
     merchant: payload.merchant || null,
     notes: payload.notes || null,
     occurred_at: payload.occurred_at || new Date().toISOString(),
+    exclude_from_spend: await categoryExcludesSpend(user.id, categoryId),
   };
 
   const { data, error } = await supabaseServer
