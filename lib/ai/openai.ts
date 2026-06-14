@@ -45,33 +45,53 @@ function parseJSONLoose(text: string): any {
   throw new Error("The AI did not return valid JSON.");
 }
 
-/** Call an OpenAI-compatible chat completion and parse a JSON object response. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Call an OpenAI-compatible chat completion and parse a JSON object response.
+ *  Retries transient rate-limit (429) / server (5xx) errors with backoff so a
+ *  burst of sequential calls (e.g. chunked statement parsing) doesn't fail. */
 export async function chatJSON(system: string, user: string, maxTokens = 4000): Promise<any> {
   const { key, baseUrl, model } = aiConfig();
   if (!key) throw new Error("AI API key is not set.");
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.1,
-      max_tokens: maxTokens,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
+  const body = JSON.stringify({
+    model,
+    temperature: 0.1,
+    max_tokens: maxTokens,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
   });
 
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error?.message || `AI request failed (${res.status}).`);
+  let lastError = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      body,
+    });
+
+    if (res.status === 429 || res.status >= 500) {
+      lastError = `AI request failed (${res.status}).`;
+      // Honor the provider's Retry-After (seconds) when present, else back off.
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitMs =
+        Number.isFinite(retryAfter) && retryAfter > 0
+          ? Math.min(retryAfter * 1000, 30000)
+          : 900 * (attempt + 1);
+      await sleep(waitMs);
+      continue;
+    }
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `AI request failed (${res.status}).`);
+    }
+    const content = data?.choices?.[0]?.message?.content ?? "";
+    return parseJSONLoose(content);
   }
-  const content = data?.choices?.[0]?.message?.content ?? "";
-  return parseJSONLoose(content);
+
+  throw new Error(lastError || "AI request failed after retries.");
 }

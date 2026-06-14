@@ -36,35 +36,33 @@ Rules:
 export function statementParserPrompt(kind: "bank" | "credit_card", categoryNames: string[]) {
   const cardNote =
     kind === "credit_card"
-      ? `This is a CREDIT CARD statement. Every purchase is an expense. A payment/credit you made TO the card (reducing the balance) is NOT spending — set "type":"income" and "is_card_payment":true for it.`
-      : `This is a BANK ACCOUNT statement. Debits are expenses, credits are income. If a line is a payment toward a credit-card bill (e.g. "credit card payment", "card autopay", "neft to ... card", a card brand name), set "is_card_payment":true. If a line is a transfer to a savings/RD/mutual-fund account, set "category_suggestion":"Transfer to Savings".`;
+      ? `This is a CREDIT CARD statement. Every purchase is an expense (t:"e"). A payment/credit made TO the card (reducing the balance) is NOT spending — set t:"i" and p:1 for it.`
+      : `This is a BANK ACCOUNT statement. Debits are expenses (t:"e"), credits are income (t:"i"). If a line is a payment toward a credit-card bill (e.g. "credit card payment", "card autopay", "neft to ... card", a card brand name), set p:1. If a line is a transfer to a savings/RD/mutual-fund account, set c:"Transfer to Savings".`;
 
-  return `You are a precise financial statement parser. Extract every transaction from the statement text into JSON.
+  // Compact short-key schema: drastically fewer output tokens than verbose JSON,
+  // which matters on token-limited free tiers. Expanded back to full fields in code.
+  return `You are a precise bank/credit-card statement parser. Extract EVERY transaction into a COMPACT JSON object that uses short keys to save space.
 
 ${cardNote}
 
-Return ONLY a valid JSON object with this exact shape:
-{
-  "period_start": "YYYY-MM-DD",      // statement period start, or null
-  "period_end": "YYYY-MM-DD",        // statement period end, or null
-  "transactions": [
-    {
-      "date": "YYYY-MM-DD",          // transaction date
-      "amount": 0,                    // POSITIVE number, no currency symbol or commas
-      "type": "expense",             // "expense" or "income"
-      "merchant": "string|null",      // payee / merchant, cleaned up
-      "description": "string|null",   // short description
-      "category_suggestion": "string",// best fit from the user's categories below
-      "is_card_payment": false        // true if this is a credit-card bill payment/settlement
-    }
-  ]
-}
+Return ONLY this JSON shape (short keys, no other fields):
+{"ps":"YYYY-MM-DD|null","pe":"YYYY-MM-DD|null","tx":[{"d":"YYYY-MM-DD","a":0,"t":"e","m":"merchant","c":"category","p":0}]}
+
+Key meanings:
+- ps = statement period start (or null); pe = period end (or null)
+- tx = array of transactions, each object:
+  - d = date (YYYY-MM-DD)
+  - a = amount as a POSITIVE number, no currency symbol or commas
+  - t = "e" for expense (money out) or "i" for income (money in)
+  - m = merchant/payee, cleaned and SHORT (a few words max)
+  - c = best category from this list when possible: ${categoryNames.join(", ")}. If none fits, a short label.
+  - p = 1 if this is a credit-card bill payment/settlement, else 0
 
 Rules:
-- amount is always a positive number. Use "type" to indicate direction.
-- Pick "category_suggestion" from this list when possible: ${categoryNames.join(", ")}. If none fits, use your best short label.
-- Convert amounts like "1,299.00 Dr" to amount 1299 type expense; "5,000.00 Cr" to amount 5000 type income.
+- Extract EVERY transaction row. Do NOT skip, summarize, truncate, or de-duplicate — output each occurrence separately, even if amount/merchant repeat. Completeness is critical.
+- a is always positive; use t for direction. "1,299.00 Dr" -> a:1299,t:"e"; "5,000.00 Cr" -> a:5000,t:"i".
+- Keep m SHORT — do not echo long remarks, UPI/IMPS reference numbers, or notes.
 - Ignore opening/closing balance lines, interest summaries, and headers — only real transactions.
-- Do not invent transactions. If the text has none, return an empty "transactions" array.
-- Output JSON only, no markdown, no commentary.`;
+- Do not invent transactions. If there are none, return "tx":[].
+- Output compact JSON only, no markdown, no commentary.`;
 }

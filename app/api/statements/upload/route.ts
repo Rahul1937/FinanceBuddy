@@ -5,10 +5,17 @@ import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 import { aiConfigured, chatJSON } from "@/lib/ai/openai";
 import { statementParserPrompt } from "@/lib/ai/prompts";
-import { isDuplicate, isRowBlocked, type SourceKind } from "@/lib/utils/statements";
+import {
+  chunkStatementText,
+  expandCompactRow,
+  isDuplicate,
+  isRowBlocked,
+  massageStatementText,
+  type SourceKind,
+} from "@/lib/utils/statements";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type Category = { id: string; name: string; exclude_from_spend: boolean | null };
 
@@ -74,17 +81,56 @@ export async function POST(request: NextRequest) {
   const catByName = new Map(cats.map((c) => [c.name.toLowerCase().trim(), c]));
   const ccCat = catByName.get("credit card payment");
 
-  // AI parse
-  let parsed: any;
+  // AI parse — token-aware. Groq's free tier caps tokens-per-minute (TPM=12000)
+  // and counts the reserved max_tokens against each request, so we keep every
+  // request safely under budget. A single call is ideal (least overhead); we
+  // only split a statement when it's too large to parse in one request.
+  const system = statementParserPrompt(source.kind as SourceKind, cats.map((c) => c.name));
+
+  // Pre-filter to transaction rows + strip reference-number bloat so we send far
+  // fewer tokens to the AI (and fit more of the statement per request).
+  const aiText = massageStatementText(text);
+
+  // Over-estimate tokens (chars / 3.5) so we never exceed the limit by accident.
+  const estTokens = (s: string) => Math.ceil(s.length / 3.5);
+  const TPM_BUDGET = 11000;                       // headroom under Groq's 12000 TPM
+  const MIN_OUTPUT = 2000;                          // never reserve less than this
+  const MAX_OUTPUT = 6000;                          // never reserve more than this
+  const systemTokens = estTokens(system) + 80;     // + per-message overhead
+
+  // Largest chunk whose (system + input + min-output) still fits the budget.
+  const maxCharsPerChunk = Math.max(4000, (TPM_BUDGET - systemTokens - MIN_OUTPUT) * 3.5);
+  const chunks = chunkStatementText(aiText, maxCharsPerChunk).slice(0, 12);
+
+  const rawRows: any[] = [];
+  let periodStartRaw: string | null = null;
+  let periodEndRaw: string | null = null;
   try {
-    const system = statementParserPrompt(source.kind as SourceKind, cats.map((c) => c.name));
-    parsed = await chatJSON(system, text.slice(0, 14000), 4000);
+    for (const chunk of chunks) {
+      // Reserve only the output the remaining budget allows (clamped to a range).
+      const maxTokens = Math.min(
+        MAX_OUTPUT,
+        Math.max(MIN_OUTPUT, TPM_BUDGET - systemTokens - estTokens(chunk))
+      );
+      const parsed = await chatJSON(system, chunk, maxTokens);
+
+      // Compact keys (tx/d/a/t/m/c/p) — tolerate verbose keys too.
+      const txArr = Array.isArray(parsed?.tx)
+        ? parsed.tx
+        : Array.isArray(parsed?.transactions)
+          ? parsed.transactions
+          : [];
+      for (const r of txArr) rawRows.push(expandCompactRow(r));
+
+      const ps = typeof parsed?.ps === "string" ? parsed.ps : typeof parsed?.period_start === "string" ? parsed.period_start : null;
+      const pe = typeof parsed?.pe === "string" ? parsed.pe : typeof parsed?.period_end === "string" ? parsed.period_end : null;
+      if (!periodStartRaw && ps) periodStartRaw = ps;
+      if (pe) periodEndRaw = pe;
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "AI parsing failed.";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
-
-  const rawRows: any[] = Array.isArray(parsed?.transactions) ? parsed.transactions : [];
 
   // Existing transactions in the statement window (for dedup)
   const dates = rawRows.map((r) => String(r.date || "").slice(0, 10)).filter(Boolean).sort();
@@ -159,8 +205,8 @@ export async function POST(request: NextRequest) {
   const importableCount = rows.filter((r) => !r.blocked && !r.duplicate).length;
 
   // Record the import (review stage)
-  const periodStart = parsed?.period_start && /^\d{4}-\d{2}-\d{2}$/.test(parsed.period_start) ? parsed.period_start : null;
-  const periodEnd = parsed?.period_end && /^\d{4}-\d{2}-\d{2}$/.test(parsed.period_end) ? parsed.period_end : null;
+  const periodStart = periodStartRaw && /^\d{4}-\d{2}-\d{2}$/.test(periodStartRaw) ? periodStartRaw : null;
+  const periodEnd = periodEndRaw && /^\d{4}-\d{2}-\d{2}$/.test(periodEndRaw) ? periodEndRaw : null;
 
   const { data: imp, error: impErr } = await supabaseServer
     .from("statement_imports")

@@ -17,6 +17,89 @@ export type ParsedRowLite = {
   merchant?: string | null;
 };
 
+/**
+ * Expand one compact AI row ({d,a,t,m,c,p}) back into the full shape the rest of
+ * the pipeline expects. Tolerant of the old verbose keys too, so a model that
+ * ignores the compact instruction still works.
+ */
+export function expandCompactRow(r: any) {
+  const t = r?.t ?? r?.type;
+  const p = r?.p ?? r?.is_card_payment;
+  return {
+    date: String(r?.d ?? r?.date ?? "").slice(0, 10),
+    amount: Number(r?.a ?? r?.amount) || 0,
+    type: t === "i" || t === "income" ? "income" : "expense",
+    merchant: r?.m ?? r?.merchant ?? null,
+    description: r?.n ?? r?.description ?? null,
+    category_suggestion: r?.c ?? r?.category_suggestion ?? null,
+    is_card_payment: p === 1 || p === true,
+  };
+}
+
+/**
+ * Shrink raw PDF text before sending it to the AI:
+ *  1. Drop boilerplate — keep only lines that look like a transaction (contain a
+ *     date or a money amount). Addresses, marketing, legal text, page numbers go.
+ *  2. Strip long reference/ID tokens (UPI/IMPS/account refs) that bloat remarks
+ *     without helping categorization. Amounts (broken by commas/dots) are kept.
+ *  3. Collapse whitespace.
+ * Falls back to the (lightly cleaned) original if filtering removes too much, so
+ * an unusual statement layout can never wipe out all the transactions.
+ */
+export function massageStatementText(text: string): string {
+  const DATE = /\b(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}|\d{4}-\d{2}-\d{2}|\d{1,2}\s?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s?\d{1,2})\b/i;
+  const AMOUNT = /(\d{1,3}(,\d{2,3})+(\.\d{1,2})?|\d+\.\d{2})/;
+
+  const kept: string[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    let line = raw.replace(/\s+/g, " ").trim();
+    if (!line) continue;
+    if (!DATE.test(line) && !AMOUNT.test(line)) continue; // boilerplate
+    line = line
+      .replace(/\b[A-Za-z0-9]*\d{11,}[A-Za-z0-9]*\b/g, "#") // 11+ digit refs (amounts never run this long)
+      .replace(/\b[A-Z0-9]{14,}\b/g, "#")                    // long alphanumeric codes
+      .replace(/\s+/g, " ")
+      .trim();
+    kept.push(line);
+  }
+
+  const result = kept.join("\n");
+  if (result.length < 100 || result.length < text.length * 0.1) {
+    return text.replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+  }
+  return result;
+}
+
+/**
+ * Split raw statement text into chunks (on line boundaries) so long statements
+ * aren't truncated by the model's input/output token limits, and so each list
+ * the model parses stays short enough to extract reliably. Chunks never split a
+ * line, so individual transaction rows stay intact.
+ */
+export function chunkStatementText(text: string, maxChars = 6000): string[] {
+  if (text.length <= maxChars) return [text];
+
+  const lines = text.split(/\r?\n/);
+  // No usable line breaks (some PDFs emit one big blob) — hard-split by chars.
+  if (lines.length < 3) {
+    const chunks: string[] = [];
+    for (let i = 0; i < text.length; i += maxChars) chunks.push(text.slice(i, i + maxChars));
+    return chunks;
+  }
+
+  const chunks: string[] = [];
+  let cur = "";
+  for (const line of lines) {
+    if (cur.length + line.length + 1 > maxChars && cur.length > 0) {
+      chunks.push(cur);
+      cur = "";
+    }
+    cur += line + "\n";
+  }
+  if (cur.trim().length > 0) chunks.push(cur);
+  return chunks;
+}
+
 /** Lowercase, strip punctuation, collapse whitespace. */
 export function normalizeMerchant(s?: string | null): string {
   return (s || "")
