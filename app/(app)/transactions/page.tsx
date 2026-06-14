@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getCategoryIcon } from "@/lib/utils/categories";
 import { useRefreshListener, emitRefresh } from "@/lib/hooks/useRefreshBus";
+import { useQuickAdd } from "@/lib/context/QuickAddContext";
 
 type Transaction = {
   id: string;
@@ -44,6 +44,7 @@ function groupByDate(transactions: Transaction[]) {
 }
 
 export default function TransactionsPage() {
+  const { open: openQuickAdd } = useQuickAdd();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,10 +160,10 @@ export default function TransactionsPage() {
           <h1 className="fb-page-title">Transactions</h1>
           <p className="fb-page-sub">{filtered.length} of {transactions.length} entries</p>
         </div>
-        <Link href="/transactions/new" className="fb-add-btn">
+        <button onClick={openQuickAdd} className="fb-add-btn">
           <Plus size={16} />
           Add
-        </Link>
+        </button>
       </div>
 
       {/* Search + filters */}

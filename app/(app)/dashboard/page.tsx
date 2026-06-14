@@ -117,6 +117,13 @@ export default function DashboardPage() {
 
   const excludedCats = useMemo(() => excludedCategoryIds(categories), [categories]);
 
+  // Uncategorised spend is attributed to the "Miscellaneous" category so it
+  // still shows in the donut and can be budgeted.
+  const miscCategoryId = useMemo(
+    () => categories.find((c) => c.name.toLowerCase() === "miscellaneous")?.id ?? null,
+    [categories]
+  );
+
   const monthlyTransactions = useMemo(
     () => transactions.filter((t) => t.occurred_at?.startsWith(activeMonthStr)),
     [transactions, activeMonthStr]
@@ -155,11 +162,13 @@ export default function DashboardPage() {
 
   const budgetSpendMap = useMemo(() => {
     return monthlyTransactions.reduce<Record<string, number>>((acc, t) => {
-      if (!isSpend(t, excludedCats) || !t.category_id) return acc;
-      acc[t.category_id] = (acc[t.category_id] || 0) + Number(t.amount || 0);
+      if (!isSpend(t, excludedCats)) return acc;
+      const key = t.category_id || miscCategoryId;
+      if (!key) return acc;
+      acc[key] = (acc[key] || 0) + Number(t.amount || 0);
       return acc;
     }, {});
-  }, [monthlyTransactions, excludedCats]);
+  }, [monthlyTransactions, excludedCats, miscCategoryId]);
 
   const chartData = useMemo(
     () =>
