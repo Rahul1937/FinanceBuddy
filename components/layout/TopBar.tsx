@@ -19,7 +19,7 @@ export default function TopBar() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <header className="flex shrink-0 items-center justify-between border-b border-[var(--surface-border)] bg-[var(--surface-card)]/95 px-5 py-3 backdrop-blur-xl">
+    <header className="relative z-30 flex shrink-0 items-center justify-between border-b border-[var(--surface-border)] bg-[var(--surface-card)]/95 px-5 py-3 backdrop-blur-xl">
       {/* Left — greeting */}
       <div className="hidden sm:block">
         <p className="text-sm text-[var(--text-muted)]">

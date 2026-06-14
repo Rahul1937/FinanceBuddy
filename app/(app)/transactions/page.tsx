@@ -51,6 +51,8 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterType, setFilterType] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Edit modal state
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -88,9 +90,11 @@ export default function TransactionsPage() {
         (t.notes ?? "").toLowerCase().includes(search.toLowerCase());
       const matchCat = filterCategory === "all" || t.category_id === filterCategory;
       const matchType = filterType === "all" || t.type === filterType;
-      return matchSearch && matchCat && matchType;
+      const day = t.occurred_at.slice(0, 10);
+      const matchDate = (!dateFrom || day >= dateFrom) && (!dateTo || day <= dateTo);
+      return matchSearch && matchCat && matchType && matchDate;
     });
-  }, [transactions, search, filterCategory, filterType]);
+  }, [transactions, search, filterCategory, filterType, dateFrom, dateTo]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -227,6 +231,34 @@ export default function TransactionsPage() {
               {getCategoryIcon(cat.name)} {cat.name}
             </button>
           ))}
+        </div>
+
+        {/* Date range */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Date</span>
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+          />
+          <span className="text-xs text-[var(--text-muted)]">to</span>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs text-[var(--text-primary)] outline-none transition focus:border-[var(--brand)]"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[var(--text-muted)] transition hover:text-[var(--brand)]"
+            >
+              <X size={12} /> Clear dates
+            </button>
+          )}
         </div>
       </div>
 
