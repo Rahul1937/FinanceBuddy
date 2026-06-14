@@ -83,14 +83,22 @@ export default function BudgetsPage() {
 
   const excludedCats = useMemo(() => excludedCategoryIds(categories), [categories]);
 
+  // Uncategorised spend rolls into the "Miscellaneous" category bucket.
+  const miscCategoryId = useMemo(
+    () => categories.find((c) => c.name.toLowerCase() === "miscellaneous")?.id ?? null,
+    [categories]
+  );
+
   const spendMap = useMemo(() => {
     return transactions.reduce<Record<string, number>>((acc, t) => {
-      if (!t.category_id || !t.occurred_at.startsWith(activeMonthStr)) return acc;
+      if (!t.occurred_at.startsWith(activeMonthStr)) return acc;
       if (!isSpend(t, excludedCats)) return acc;
-      acc[t.category_id] = (acc[t.category_id] || 0) + Number(t.amount || 0);
+      const key = t.category_id || miscCategoryId;
+      if (!key) return acc;
+      acc[key] = (acc[key] || 0) + Number(t.amount || 0);
       return acc;
     }, {});
-  }, [transactions, activeMonthStr, excludedCats]);
+  }, [transactions, activeMonthStr, excludedCats, miscCategoryId]);
 
   const totalBudget = useMemo(() => filteredBudgets.reduce((s, b) => s + Number(b.amount || 0), 0), [filteredBudgets]);
   const totalSpent  = useMemo(() => filteredBudgets.reduce((s, b) => s + (b.category_id ? spendMap[b.category_id] || 0 : 0), 0), [filteredBudgets, spendMap]);

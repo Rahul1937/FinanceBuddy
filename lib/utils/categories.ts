@@ -19,6 +19,12 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   clothing: "👕",
   personal: "🧴",
   fitness: "🏋️",
+  miscellaneous: "📦",
+  "transfer to savings": "🏦",
+  "invest in stocks": "📈",
+  sip: "🔁",
+  "savings account": "🏦",
+  "credit card payment": "💳",
 };
 
 const CATEGORY_COLOR_MAP: Record<string, string> = {
@@ -31,6 +37,12 @@ const CATEGORY_COLOR_MAP: Record<string, string> = {
   income: "#facc15",
   utilities: "#a78bfa",
   savings: "#60a5fa",
+  miscellaneous: "#A1A1AA",
+  "transfer to savings": "#0E9888",
+  "invest in stocks": "#6366F1",
+  sip: "#0EA5E9",
+  "savings account": "#10B981",
+  "credit card payment": "#94A3B8",
 };
 
 export function getCategoryIcon(name: string): string {

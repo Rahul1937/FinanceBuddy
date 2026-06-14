@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard, ArrowLeftRight, PlusCircle, CalendarClock, MoreHorizontal,
-  Target, FileUp, Sparkles, Settings2, BarChart3, X,
+  Target, FileUp, Sparkles, Settings2, BarChart3, PiggyBank, X,
 } from "lucide-react";
 import { useQuickAdd } from "@/lib/context/QuickAddContext";
 
@@ -18,6 +18,7 @@ const tabs = [
 
 const moreItems = [
   { href: "/budgets",  label: "Budgets",  icon: Target },
+  { href: "/savings",  label: "Savings",  icon: PiggyBank },
   { href: "/import",   label: "Import",   icon: FileUp },
   { href: "/reports",  label: "Reports",  icon: BarChart3 },
   { href: "/insights", label: "Insights", icon: Sparkles },

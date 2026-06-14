@@ -10,6 +10,13 @@ const defaultCategories = [
   { name: "Entertainment", color: "#fb7185" },
   { name: "Health", color: "#34d399" },
   { name: "Income", color: "#facc15" },
+  { name: "Miscellaneous", color: "#A1A1AA", icon: "📦" },
+  // Non-spend transfers / savings (excluded from spend totals & budgets).
+  { name: "Transfer to Savings", color: "#0E9888", icon: "🏦", exclude_from_spend: true, is_savings: true },
+  { name: "Invest in Stocks", color: "#6366F1", icon: "📈", exclude_from_spend: true, is_savings: true },
+  { name: "SIP", color: "#0EA5E9", icon: "🔁", exclude_from_spend: true, is_savings: true },
+  { name: "Savings Account", color: "#10B981", icon: "🏦", exclude_from_spend: true, is_savings: true },
+  { name: "Credit Card Payment", color: "#94A3B8", icon: "💳", exclude_from_spend: true },
 ];
 
 export async function GET(request: NextRequest) {
@@ -35,6 +42,9 @@ export async function GET(request: NextRequest) {
         user_id: user.id,
         name: category.name,
         color: category.color,
+        icon: category.icon ?? null,
+        exclude_from_spend: category.exclude_from_spend ?? false,
+        is_savings: category.is_savings ?? false,
       })))
       .select();
 

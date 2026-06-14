@@ -13,6 +13,7 @@ import {
   FileUp,
   CalendarClock,
   BarChart3,
+  PiggyBank,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { excludedCategoryIds, isSpend } from "@/lib/utils/spend";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/transactions",     label: "Transactions", icon: ArrowLeftRight  },
   { href: "/transactions/new", label: "Add expense",  icon: PlusCircle      },
   { href: "/budgets",          label: "Budgets",      icon: Target          },
+  { href: "/savings",          label: "Savings",      icon: PiggyBank       },
   { href: "/recurring",        label: "Recurring",    icon: CalendarClock   },
   { href: "/import",           label: "Import",       icon: FileUp          },
   { href: "/reports",          label: "Reports",      icon: BarChart3       },
