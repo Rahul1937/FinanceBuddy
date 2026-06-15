@@ -3,9 +3,9 @@ import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 
 // Combined monthly report data. Reads rolled-up history from monthly_summaries
-// and the recent raw transactions, merging them so reports span beyond the
-// 2-month raw retention window. Raw is the source of truth for any month it has
-// data for; summaries fill in the older (pruned) months.
+// and the recent raw transactions, merging them so reports span beyond the raw
+// retention window (current + previous 2 months). Raw is the source of truth for
+// any month it has data for; summaries fill in the older (pruned) months.
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

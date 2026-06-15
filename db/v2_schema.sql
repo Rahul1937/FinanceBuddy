@@ -105,18 +105,22 @@ create unique index if not exists monthly_summaries_uniq
 
 
 -- 7) RETENTION FUNCTION ----------------------------------------------------
--- Rolls every transaction OLDER than the first day of the previous month into
--- monthly_summaries, then deletes those raw rows. Net effect: only the current
--- + previous calendar month of raw transactions are ever kept.
+-- Rolls every transaction OLDER than the cutoff into monthly_summaries, then
+-- deletes those raw rows. Net effect: only the current + previous 2 calendar
+-- months of raw transactions are ever kept (see db/v4_retention.sql).
 --   • App calls it per-user:  select prune_old_transactions('<user-uuid>');
 --   • Cron can call it for all: select prune_old_transactions();
 -- Rollup + delete run in one transaction (the function body), so it's atomic.
+-- Returns the number of raw rows pruned.
+drop function if exists prune_old_transactions(uuid);
 create or replace function prune_old_transactions(p_user_id uuid default null)
-returns void
+returns integer
 language plpgsql
 as $$
 declare
-  cutoff date := (date_trunc('month', current_date) - interval '1 month')::date;
+  -- keep current + previous 2 months (June -> cutoff April 1)
+  cutoff date := (date_trunc('month', current_date) - interval '2 month')::date;
+  deleted integer;
 begin
   insert into monthly_summaries
     (user_id, month, category_id, category_name, type, total, txn_count, exclude_from_spend)
@@ -141,9 +145,15 @@ begin
     category_name      = excluded.category_name,
     exclude_from_spend = excluded.exclude_from_spend;
 
-  delete from transactions
-  where occurred_at < cutoff
-    and (p_user_id is null or user_id = p_user_id);
+  with del as (
+    delete from transactions
+    where occurred_at < cutoff
+      and (p_user_id is null or user_id = p_user_id)
+    returning 1
+  )
+  select count(*) into deleted from del;
+
+  return deleted;
 end;
 $$;
 
