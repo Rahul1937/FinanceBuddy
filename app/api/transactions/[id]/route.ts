@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 import { categoryExcludesSpend } from "@/lib/server/spend";
+import { learnMerchantCategory } from "@/lib/server/merchantMemory";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -25,6 +26,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Learn the merchant -> category choice when a category was set on edit.
+  if ("category_id" in payload && data?.category_id && data?.merchant) {
+    await learnMerchantCategory(user.id, data.merchant, data.category_id);
   }
 
   return NextResponse.json({ transaction: data });

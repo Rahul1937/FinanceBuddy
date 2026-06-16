@@ -55,7 +55,12 @@ Key meanings:
   - a = amount as a POSITIVE number, no currency symbol or commas
   - t = "e" for expense (money out) or "i" for income (money in)
   - m = merchant/payee, cleaned and SHORT (a few words max)
-  - c = best category from this list when possible: ${categoryNames.join(", ")}. If none fits, a short label.
+  - c = the category. Pick the SINGLE best match from EXACTLY this list, copied verbatim: ${categoryNames.join(", ")}.
+        Infer from the merchant: food delivery / restaurants / groceries / cafes -> Food;
+        fuel / cabs / metro / travel -> Transport; recharge / electricity / rent / internet -> Bills;
+        pharmacy / hospital / clinic -> Health; online shopping / malls -> Shopping;
+        movies / streaming / games -> Entertainment. Use "Miscellaneous" ONLY when nothing else fits
+        (e.g. a transfer to a person's name you can't identify).
   - p = 1 if this is a credit-card bill payment/settlement, else 0
 
 Rules:

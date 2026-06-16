@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 import { categoryExcludesSpend } from "@/lib/server/spend";
+import { learnMerchantCategory } from "@/lib/server/merchantMemory";
 
 export async function GET(request: NextRequest) {
   const user = await getSessionUser(request);
@@ -50,6 +51,11 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Learn the merchant -> category choice for future statement imports.
+  if (categoryId && transaction.merchant) {
+    await learnMerchantCategory(user.id, transaction.merchant, categoryId);
   }
 
   return NextResponse.json({ transaction: data });

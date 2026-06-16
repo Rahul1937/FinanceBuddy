@@ -13,6 +13,8 @@ import {
   massageStatementText,
   type SourceKind,
 } from "@/lib/utils/statements";
+import { findLearnedCategory, matchCategory } from "@/lib/utils/categorize";
+import { getMerchantCategoryMap } from "@/lib/server/merchantMemory";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -79,7 +81,11 @@ export async function POST(request: NextRequest) {
     .eq("user_id", user.id);
   const cats = (catsData ?? []) as Category[];
   const catByName = new Map(cats.map((c) => [c.name.toLowerCase().trim(), c]));
+  const catById = new Map(cats.map((c) => [c.id, c]));
   const ccCat = catByName.get("credit card payment");
+
+  // Learned merchant -> category memory (your past corrections).
+  const learnedMap = await getMerchantCategoryMap(user.id);
 
   // AI parse — token-aware. Groq's free tier caps tokens-per-minute (TPM=12000)
   // and counts the reserved max_tokens against each request, so we keep every
@@ -164,11 +170,16 @@ export async function POST(request: NextRequest) {
         categoryName = ccCat.name;
         excludeFromSpend = true;
       } else {
-        const match = catByName.get(String(r.category_suggestion || "").toLowerCase().trim());
-        if (match) {
-          categoryId = match.id;
-          categoryName = match.name;
-          excludeFromSpend = !!match.exclude_from_spend;
+        // Your learned choice for this merchant wins; otherwise smart-match the
+        // AI suggestion + merchant text to a real category.
+        const resolvedId =
+          findLearnedCategory(learnedMap, merchant) ||
+          matchCategory(r.category_suggestion, merchant, cats);
+        const cat = resolvedId ? catById.get(resolvedId) : null;
+        if (cat) {
+          categoryId = cat.id;
+          categoryName = cat.name;
+          excludeFromSpend = !!cat.exclude_from_spend;
         } else {
           categoryName = r.category_suggestion ? String(r.category_suggestion) : null;
         }
