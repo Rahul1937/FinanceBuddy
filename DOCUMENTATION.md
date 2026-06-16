@@ -308,6 +308,25 @@ individual purchases (from the card statement) are counted normally. Net: spend 
 payment counts in **no** analytics (only the raw list). Example — a 16 Apr–15 May statement paid
 25 May: 16–30 Apr purchases → April; 1–15 May purchases → May; the 25 May payment → list only.
 
+### 10.2 Categorization & merchant memory
+
+Each parsed row's category is resolved in this priority order:
+1. **Card payment** — `is_card_payment` rows → Credit Card Payment (excluded).
+2. **Learned merchant memory** — if you've previously categorized this merchant, that choice wins
+   (`merchant_categories` table; [merchantMemory.ts](lib/server/merchantMemory.ts) +
+   `findLearnedCategory`). Matched by normalized merchant name, with a similarity fallback.
+3. **Smart matching** — `matchCategory` ([categorize.ts](lib/utils/categorize.ts)) maps the AI
+   suggestion + merchant text to a real category via exact name, a keyword/synonym table
+   (e.g. swiggy/zomato → Food, fuel/uber → Transport, recharge/electricity → Bills), then fuzzy
+   token similarity. This is what stops most rows defaulting to Miscellaneous.
+4. Otherwise uncategorized (shows as Miscellaneous in analytics).
+
+**Learning:** whenever you set/change a category — on **import commit**, on a **manual add**, or by
+**editing** a transaction — the app upserts a `merchant → category` mapping. So if you fix
+"Smart Q" from Miscellaneous to Food once, every future import of "Smart Q" is auto-set to Food.
+The map is keyed by normalized merchant and **survives pruning** (it's a separate table, not derived
+from raw transactions). Re-categorizing a merchant later just overwrites its mapping.
+
 ---
 
 ## 11. Retention & pruning
@@ -414,6 +433,11 @@ Run in the Supabase SQL editor, in order. All are idempotent / safe to re-run.
 3. **`db/v4_retention.sql`** — updates `prune_old_transactions()` to keep current + previous 2
    months (returns pruned count). *(v2 also contains the updated definition for fresh installs.)*
 4. **`db/v5_cron.sql`** — enables `pg_cron` and schedules `fb-prune` (01:00 IST every 2 days).
+5. **`db/v6_merchant_memory.sql`** — creates `merchant_categories` (learned merchant → category
+   map) used to auto-categorize future imports.
+
+(Utility, not part of the ordered setup: **`db/reset_all_data.sql`** truncates every app table for
+a fresh start — destructive, run only when you want a blank database.)
 
 The base tables (`users`, `sessions`, `transactions`, `budgets`, `categories`) predate these files
 and are assumed to already exist.

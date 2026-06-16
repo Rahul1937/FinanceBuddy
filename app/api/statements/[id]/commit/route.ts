@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/server/auth";
 import { supabaseServer } from "@/lib/supabase/server";
 import { isRowBlocked, type SourceKind } from "@/lib/utils/statements";
+import { learnMerchantCategories } from "@/lib/server/merchantMemory";
 
 type IncomingRow = {
   date: string;
@@ -60,6 +61,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { error: insErr } = await supabaseServer.from("transactions").insert(inserts);
   if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+
+  // Remember the category chosen for each merchant so future imports auto-apply it.
+  await learnMerchantCategories(
+    user.id,
+    valid.map((r) => ({ merchant: r.merchant, categoryId: r.categoryId || null }))
+  );
 
   await supabaseServer
     .from("statement_imports")
