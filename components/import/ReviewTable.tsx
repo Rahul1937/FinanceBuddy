@@ -32,9 +32,13 @@ export type CommitRow = {
   excludeFromSpend: boolean;
 };
 
-function formatINR(v: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(v);
-}
+type RowState = {
+  selected: boolean;
+  categoryId: string | null;
+  merchant: string;
+  amount: string;
+  type: "expense" | "income";
+};
 
 export default function ReviewTable({
   rows,
@@ -47,35 +51,41 @@ export default function ReviewTable({
   committing: boolean;
   onCommit: (selected: CommitRow[]) => void;
 }) {
-  // Per-row selection + category override. Blocked rows can never be selected.
-  const [state, setState] = useState<Record<number, { selected: boolean; categoryId: string | null }>>(
-    () =>
-      Object.fromEntries(
-        rows.map((r) => [r.tempId, { selected: !r.blocked && !r.duplicate, categoryId: r.categoryId }])
-      )
+  // Per-row selection + editable category / merchant / amount.
+  // Blocked rows can never be selected.
+  const [state, setState] = useState<Record<number, RowState>>(() =>
+    Object.fromEntries(
+      rows.map((r) => [
+        r.tempId,
+        {
+          selected: !r.blocked && !r.duplicate,
+          categoryId: r.categoryId,
+          merchant: r.merchant ?? r.description ?? "",
+          amount: String(r.amount ?? ""),
+          type: r.type === "income" ? "income" : "expense",
+        },
+      ])
+    )
   );
 
   const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
+  const update = (id: number, patch: Partial<RowState>) =>
+    setState((s) => ({ ...s, [id]: { ...s[id], ...patch } }));
+
   const selectedRows = rows.filter((r) => !r.blocked && state[r.tempId]?.selected);
-
-  const toggle = (id: number) =>
-    setState((s) => ({ ...s, [id]: { ...s[id], selected: !s[id].selected } }));
-
-  const setCategory = (id: number, categoryId: string) =>
-    setState((s) => ({ ...s, [id]: { ...s[id], categoryId: categoryId || null } }));
 
   const handleCommit = () => {
     const payload: CommitRow[] = selectedRows.map((r) => {
-      const chosen = state[r.tempId].categoryId;
-      const cat = chosen ? catById.get(chosen) : null;
+      const st = state[r.tempId];
+      const cat = st.categoryId ? catById.get(st.categoryId) : null;
       return {
         date: r.date,
-        amount: r.amount,
-        type: r.type,
-        merchant: r.merchant,
+        amount: Number(st.amount) || 0,
+        type: st.type,
+        merchant: st.merchant.trim() || null,
         description: r.description,
-        categoryId: chosen,
+        categoryId: st.categoryId,
         excludeFromSpend: r.isCardPayment || !!cat?.exclude_from_spend,
       };
     });
@@ -87,7 +97,7 @@ export default function ReviewTable({
       <div className="space-y-2">
         {rows.map((r) => {
           const st = state[r.tempId];
-          const isIncome = r.type === "income";
+          const isIncome = st?.type === "income";
           return (
             <div
               key={r.tempId}
@@ -103,15 +113,20 @@ export default function ReviewTable({
                 type="checkbox"
                 disabled={r.blocked}
                 checked={!!st?.selected}
-                onChange={() => toggle(r.tempId)}
+                onChange={() => update(r.tempId, { selected: !st?.selected })}
                 className="h-4 w-4 shrink-0 accent-[var(--brand)] disabled:opacity-40"
               />
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                    {r.merchant || r.description || "Unnamed"}
-                  </span>
+                  {/* Editable merchant / name */}
+                  <input
+                    value={st?.merchant ?? ""}
+                    disabled={r.blocked}
+                    onChange={(e) => update(r.tempId, { merchant: e.target.value })}
+                    placeholder="Merchant / name"
+                    className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-[var(--text-primary)] outline-none transition hover:border-[var(--surface-border)] focus:border-[var(--brand)] focus:bg-[var(--surface-raised)] disabled:opacity-60"
+                  />
                   {r.blocked && (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[var(--surface-raised)] px-2 py-0.5 text-[10px] font-semibold text-[var(--text-muted)]">
                       <Ban size={10} /> {r.blockedReason}
@@ -129,7 +144,7 @@ export default function ReviewTable({
                   <select
                     value={st?.categoryId ?? ""}
                     disabled={r.blocked}
-                    onChange={(e) => setCategory(r.tempId, e.target.value)}
+                    onChange={(e) => update(r.tempId, { categoryId: e.target.value || null })}
                     className="max-w-[160px] truncate rounded-md border border-[var(--surface-border)] bg-[var(--surface-raised)] px-1.5 py-0.5 text-[11px] text-[var(--text-secondary)] outline-none disabled:opacity-50"
                   >
                     <option value="">Uncategorized</option>
@@ -139,14 +154,41 @@ export default function ReviewTable({
                       </option>
                     ))}
                   </select>
+                  <span>·</span>
+                  {/* Editable expense / income toggle */}
+                  <button
+                    type="button"
+                    disabled={r.blocked}
+                    onClick={() =>
+                      update(r.tempId, { type: st?.type === "income" ? "expense" : "income" })
+                    }
+                    className={`shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-semibold transition disabled:opacity-50 ${
+                      st?.type === "income"
+                        ? "bg-[var(--positive-soft)] text-[var(--positive)]"
+                        : "bg-[var(--brand-soft)] text-[var(--brand)]"
+                    }`}
+                  >
+                    {st?.type === "income" ? "Income" : "Expense"}
+                  </button>
                 </div>
               </div>
 
+              {/* Editable amount */}
               <div
-                className="shrink-0 font-mono text-sm font-semibold tabular-nums"
+                className="flex shrink-0 items-center gap-0.5 font-mono text-sm font-semibold tabular-nums"
                 style={{ color: isIncome ? "var(--positive)" : "var(--text-primary)" }}
               >
-                {isIncome ? "+" : "−"}{formatINR(r.amount)}
+                <span>{isIncome ? "+" : "−"}₹</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={st?.amount ?? ""}
+                  disabled={r.blocked}
+                  onChange={(e) => update(r.tempId, { amount: e.target.value })}
+                  className="w-20 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-right outline-none transition hover:border-[var(--surface-border)] focus:border-[var(--brand)] focus:bg-[var(--surface-raised)] disabled:opacity-60 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
               </div>
             </div>
           );
