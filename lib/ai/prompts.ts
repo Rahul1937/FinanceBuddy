@@ -68,6 +68,9 @@ Rules:
 - a is always positive; use t for direction. "1,299.00 Dr" -> a:1299,t:"e"; "5,000.00 Cr" -> a:5000,t:"i".
 - Keep m SHORT — do not echo long remarks, UPI/IMPS reference numbers, or notes.
 - Ignore opening/closing balance lines, interest summaries, and headers — only real transactions.
+- Ignore any section labeled "example", "sample", "specimen", "illustration", "for illustration
+  purposes", or similar — those rows are template/demo content printed by the bank, not this
+  customer's real transactions, even though they look like normal transaction rows.
 - Do not invent transactions. If there are none, return "tx":[].
 - Output compact JSON only, no markdown, no commentary.`;
 }

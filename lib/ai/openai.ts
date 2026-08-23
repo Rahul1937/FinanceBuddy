@@ -54,11 +54,17 @@ export async function chatJSON(system: string, user: string, maxTokens = 4000): 
   const { key, baseUrl, model } = aiConfig();
   if (!key) throw new Error("AI API key is not set.");
 
+  // GPT-OSS (Groq) is a reasoning model that by default emits a chain-of-thought
+  // "reasoning" trace, which eats into max_tokens and can starve the actual JSON
+  // output (causing Groq's JSON-mode validator to reject a truncated response).
+  // Disable it and keep reasoning effort low so calls stay fast and JSON-only.
+  const isGptOss = /gpt-oss/i.test(model);
   const body = JSON.stringify({
     model,
     temperature: 0.1,
     max_tokens: maxTokens,
     response_format: { type: "json_object" },
+    ...(isGptOss ? { reasoning_effort: "low", include_reasoning: false } : {}),
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
