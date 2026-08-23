@@ -129,7 +129,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key>     # server only — never expose
 # AI (OpenAI-compatible). Example shows Groq (free tier).
 AI_API_KEY=gsk_xxx                                # falls back to OPENAI_API_KEY
 AI_BASE_URL=https://api.groq.com/openai/v1        # default: https://api.openai.com/v1
-AI_MODEL=llama-3.3-70b-versatile                  # default: gpt-4o-mini
+AI_MODEL=openai/gpt-oss-120b                       # default: gpt-4o-mini
 ```
 > AI keys are **server-side only** (no `NEXT_PUBLIC_` prefix). The Supabase service-role key
 > bypasses RLS — access control lives entirely in the API routes via `getSessionUser`.
@@ -446,9 +446,9 @@ and are assumed to already exist.
 
 ## 18. Free-tier limits & known caveats
 
-- **AI tokens-per-minute** (e.g. Groq free = 12k TPM) cap a single statement import to roughly
-  **150–200 transactions** (after compact output + input massaging). Bigger statements: split the
-  PDF, switch `AI_MODEL`, or upgrade the AI tier.
+- **AI tokens-per-minute** (e.g. Groq free `openai/gpt-oss-120b` = 8k TPM) cap a single statement
+  import to roughly **100–150 transactions** (after compact output + input massaging). Bigger
+  statements: split the PDF, switch `AI_MODEL`, or upgrade the AI tier.
 - **No OCR** — scanned/image-only PDFs aren't supported.
 - **Web Speech API** voice entry is best on Android Chrome; iOS Safari can be flaky (a Groq Whisper
   fallback could be added).

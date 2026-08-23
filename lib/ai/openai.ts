@@ -4,7 +4,7 @@
 // Configure via env:
 //   AI_BASE_URL  e.g. https://api.groq.com/openai/v1   (default: OpenAI)
 //   AI_API_KEY   your provider key (falls back to OPENAI_API_KEY)
-//   AI_MODEL     e.g. llama-3.3-70b-versatile           (default: gpt-4o-mini)
+//   AI_MODEL     e.g. openai/gpt-oss-120b                (default: gpt-4o-mini)
 
 const PLACEHOLDERS = new Set(["", "your-openai-key", "your-groq-key", "your-api-key"]);
 
