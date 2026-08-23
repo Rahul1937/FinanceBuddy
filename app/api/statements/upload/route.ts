@@ -87,10 +87,10 @@ export async function POST(request: NextRequest) {
   // Learned merchant -> category memory (your past corrections).
   const learnedMap = await getMerchantCategoryMap(user.id);
 
-  // AI parse — token-aware. Groq's free tier caps tokens-per-minute (TPM=12000)
-  // and counts the reserved max_tokens against each request, so we keep every
-  // request safely under budget. A single call is ideal (least overhead); we
-  // only split a statement when it's too large to parse in one request.
+  // AI parse — token-aware. Groq's free tier caps tokens-per-minute (TPM=8000 for
+  // openai/gpt-oss-120b) and counts the reserved max_tokens against each request,
+  // so we keep every request safely under budget. A single call is ideal (least
+  // overhead); we only split a statement when it's too large to parse in one request.
   const system = statementParserPrompt(source.kind as SourceKind, cats.map((c) => c.name));
 
   // Pre-filter to transaction rows + strip reference-number bloat so we send far
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
   // Over-estimate tokens (chars / 3.5) so we never exceed the limit by accident.
   const estTokens = (s: string) => Math.ceil(s.length / 3.5);
-  const TPM_BUDGET = 11000;                       // headroom under Groq's 12000 TPM
+  const TPM_BUDGET = 7000;                        // headroom under Groq's 8000 TPM
   const MIN_OUTPUT = 2000;                          // never reserve less than this
   const MAX_OUTPUT = 6000;                          // never reserve more than this
   const systemTokens = estTokens(system) + 80;     // + per-message overhead
